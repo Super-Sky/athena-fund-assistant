@@ -16,6 +16,18 @@ Existing single-language planning documents remain as seed drafts until they are
 
 ## Planning Docs
 
+- `platform-mvp-plan.zh-CN.md`
+  - Athena + fund assistant 双服务 MVP 中文执行计划。
+- `platform-mvp-plan.en-US.md`
+  - English execution plan for the Athena + fund assistant dual-service MVP.
+- `data-source-strategy.zh-CN.md`
+  - 中国基金/ETF 与美股 ETF/指数真实数据源中文方案。
+- `data-source-strategy.en-US.md`
+  - English real-data strategy for China funds/ETFs and US ETFs/indices.
+- `athena-mvp-gap.zh-CN.md`
+  - Athena 底座为 fund assistant MVP 需要补齐的中文缺口清单。
+- `athena-mvp-gap.en-US.md`
+  - English gap list for Athena runtime capabilities required by the fund assistant MVP.
 - `product-boundary.md`
   - Defines what the fund assistant is allowed to do and what it must avoid.
 - `architecture.md`
