@@ -21,9 +21,9 @@ Existing single-language planning documents remain as seed drafts until they are
 - `platform-mvp-plan.en-US.md`
   - English execution plan for the Athena + fund assistant dual-service MVP.
 - `data-source-strategy.zh-CN.md`
-  - 中国基金/ETF 与美股 ETF/指数真实数据源中文方案。
+  - 中国基金/ETF 与美股股票/ETF/指数/汇率/交易日历真实数据源中文方案。
 - `data-source-strategy.en-US.md`
-  - English real-data strategy for China funds/ETFs and US ETFs/indices.
+  - English real-data strategy for China funds/ETFs and US equities/ETFs/indices/FX/market calendars.
 - `athena-mvp-gap.zh-CN.md`
   - Athena 底座为 fund assistant MVP 需要补齐的中文缺口清单。
 - `athena-mvp-gap.en-US.md`
