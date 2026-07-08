@@ -99,3 +99,53 @@ Acceptance:
 - Missing source / freshness is flagged.
 - Missing risk / invalidation is flagged.
 
+## Issue 9: Convert Planning Docs To zh-CN And en-US Pairs
+
+Convert durable planning documents into paired Chinese and English versions.
+
+Acceptance:
+
+- Each durable document has `*.zh-CN.md` and `*.en-US.md` versions.
+- `docs/README.md` links both versions.
+- Product boundaries, governance rules, data assumptions, and MVP acceptance criteria stay aligned.
+
+## Issue 10: China Fund And ETF Data Source Research
+
+Confirm the first legal and technically viable data path for China public funds, ETFs, LOFs, and major indices.
+
+Acceptance:
+
+- At least one China live provider candidate is selected for MVP implementation.
+- Tushare, AKShare/Eastmoney, exchange, and AMAC paths are documented with risks.
+- Experimental providers are clearly marked as non-production defaults.
+
+## Issue 11: US ETF And Index Data Source Research
+
+Confirm the first free or low-cost legal data path for US ETFs and major US indices.
+
+Acceptance:
+
+- At least one US live provider candidate is selected for MVP implementation.
+- Alpha Vantage, FMP, Tiingo, Nasdaq Data Link, Stooq, and Yahoo/yfinance paths are documented with risks.
+- Timezone, delay, and non-trading-day handling are part of the provider contract.
+
+## Issue 12: Docker Compose MVP Runtime
+
+Create a Docker / Docker Compose runtime profile for the fund assistant MVP.
+
+Acceptance:
+
+- Go API, React UI, PostgreSQL, and Redis can run locally.
+- Athena base URL and auth token are configured by environment variables.
+- Startup docs explain the local path.
+
+## Athena Dependency Issues
+
+The fund assistant depends on these Athena runtime foundation tasks:
+
+- `Super-Sky/Athena#7`: Agent Run API foundation for business applications.
+- `Super-Sky/Athena#8`: OpenAI-compatible tools and tool_calls contract.
+- `Super-Sky/Athena#9`: Remote business tool registry and execution surface.
+- `Super-Sky/Athena#10`: External memory and context asset APIs for business apps.
+- `Super-Sky/Athena#11`: Agent trace timeline API and admin readout.
+- `Super-Sky/Athena#12`: Docker Compose runtime profile with PostgreSQL and Redis.
