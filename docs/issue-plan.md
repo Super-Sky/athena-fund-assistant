@@ -119,15 +119,15 @@ Acceptance:
 - Tushare, AKShare/Eastmoney, exchange, and AMAC paths are documented with risks.
 - Experimental providers are clearly marked as non-production defaults.
 
-## Issue 11: US ETF And Index Data Source Research
+## Issue 11: US Equity, ETF, And Index Data Source Research
 
-Confirm the first free or low-cost legal data path for US ETFs and major US indices.
+Confirm the first free or low-cost legal data path for US equities, ETFs, major US indices, USD/CNY FX rates, and US market-calendar handling.
 
 Acceptance:
 
 - At least one US live provider candidate is selected for MVP implementation.
 - Alpha Vantage, FMP, Tiingo, Nasdaq Data Link, Stooq, and Yahoo/yfinance paths are documented with risks.
-- Timezone, delay, and non-trading-day handling are part of the provider contract.
+- US equities, ETFs, indices, FX, timezone, delay, and non-trading-day handling are part of the provider contract.
 
 ## Issue 12: Docker Compose MVP Runtime
 
