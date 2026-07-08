@@ -48,6 +48,20 @@
   - provider validation 报告和探针。
 - `internal/data/mock_provider.go`
   - 当前 mock provider，明确标记为临时数据。
+- `cmd/providerprobe`
+  - 对真实数据源执行验证探针，输出 JSON validation report。
+- `internal/providerprobe`
+  - Alpha Vantage / Tushare 等真实数据源的 validation-only 探针；不接入业务 provider。
+
+## 验证命令
+
+```bash
+go run ./cmd/providerprobe --provider alpha_vantage
+ALPHA_VANTAGE_API_KEY=... go run ./cmd/providerprobe --provider alpha_vantage
+TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
+```
+
+命令输出 JSON 报告。任何必需探针失败时，命令返回非零退出码。
 
 ## 验收标准
 

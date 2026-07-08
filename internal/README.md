@@ -14,6 +14,8 @@ This directory contains fund assistant application modules. Business objects liv
   - Versionable domain models and validation rules.
 - `journal/`
   - Decision journal persistence boundary.
+- `providerprobe/`
+  - Validation-only probes for real data sources before business provider coding.
 - `server/`
   - Standard-library HTTP API mapping.
 

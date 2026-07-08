@@ -48,6 +48,20 @@ Forbidden order:
   - Provider validation report and probes.
 - `internal/data/mock_provider.go`
   - Current mock provider, explicitly marked as temporary data.
+- `cmd/providerprobe`
+  - Runs validation probes against real data sources and emits JSON validation reports.
+- `internal/providerprobe`
+  - Validation-only probes for real data sources such as Alpha Vantage and Tushare; these do not connect business providers.
+
+## Validation Commands
+
+```bash
+go run ./cmd/providerprobe --provider alpha_vantage
+ALPHA_VANTAGE_API_KEY=... go run ./cmd/providerprobe --provider alpha_vantage
+TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
+```
+
+The command emits a JSON report. It exits non-zero when any required probe fails.
 
 ## Acceptance Criteria
 
