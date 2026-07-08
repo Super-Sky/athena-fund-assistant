@@ -36,7 +36,7 @@ Both projects should keep a consistent stack:
 - Portfolio / PortfolioHolding.
 - FundInstrument / FundSnapshot / MarketSnapshot.
 - China fund/ETF data providers.
-- US ETF/index data providers.
+- US equity/ETF/index/FX/market-calendar data providers.
 - Fund diagnosis.
 - Conservative / balanced / aggressive decision matrix.
 - Decision journal.
@@ -90,7 +90,7 @@ Acceptance:
 Deliverables:
 
 - China fund/ETF provider.
-- US ETF/index provider.
+- US equity/ETF/index/FX/market-calendar provider.
 - Data freshness / timezone / delay / license metadata.
 - Provider interface and cache layer.
 - Data-source failure fallback.
@@ -98,7 +98,7 @@ Deliverables:
 Acceptance:
 
 - At least one China data path can fetch real fund or ETF data.
-- At least one US data path can fetch real ETF or index data.
+- At least one US data path can fetch real equity, ETF, or index data and either provide USD/CNY FX rates or explicitly mark FX as unavailable.
 - Every data item preserves `source`, `fetched_at`, `market_time`, `timezone`, `delay`, `provider`, `license_terms`, `confidence`, and `schema_version`.
 - Temporary mock/CSV data must be clearly marked in the UI.
 
@@ -143,7 +143,7 @@ Recommended parallel tracks:
 
 - `Runtime Agent`: Athena agent loop, tool calls, trace, memory, and governance APIs.
 - `Finance Domain Agent`: fund-app domain models and decision matrix.
-- `Data Provider Agent`: China and US data providers.
+- `Data Provider Agent`: China fund / ETF and US equity / ETF / index / FX / market-calendar providers.
 - `UI Agent`: fund assistant frontend.
 - `Docker Agent`: dual-service Docker / Compose.
 - `Governance Agent`: financial output governance, data-license markers, and bilingual docs.
@@ -154,7 +154,6 @@ The first implementation should use one orchestrator plus deterministic workers.
 
 - A free data source is not automatically commercial-safe or redistribution-safe.
 - China fund data has less clear licensing boundaries than US API providers.
-- US data must handle the `America/New_York` timezone, non-trading days, and delayed feeds.
+- US data must handle the `America/New_York` timezone, non-trading days, half trading days, delayed feeds, and USD/CNY FX rates.
 - The default output must not be a single-path buy/sell conclusion.
 - Percentages must be derived from user profile, portfolio constraints, strategy templates, historical data, or explicit rules.
-
