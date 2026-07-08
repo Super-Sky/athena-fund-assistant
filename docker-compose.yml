@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      ATHENA_FUND_API_ADDR: ":8081"
+      ATHENA_BASE_URL: "${ATHENA_BASE_URL:-http://host.docker.internal:8080}"
+      DATABASE_URL: "${DATABASE_URL:-postgres://athena_fund:athena_fund@postgres:5432/athena_fund?sslmode=disable}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+    ports:
+      - "${ATHENA_FUND_API_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-athena_fund}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-athena_fund}"
+      POSTGRES_DB: "${POSTGRES_DB:-athena_fund}"
+    ports:
+      - "${ATHENA_FUND_POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${ATHENA_FUND_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -25,6 +25,15 @@ Recommended provider order:
 3. public or user-key data provider
 4. paid data provider, only after license review
 
+## Validation-First Rule
+
+Information tools and real data providers must be validated before business coding. A provider cannot feed diagnosis, decision matrices, UI, or Athena tool calls until its sample payloads, normalized schema, metadata, timezone, delay, license marker, and failure behavior are confirmed.
+
+The durable bilingual rule lives in:
+
+- `docs/provider-validation.zh-CN.md`
+- `docs/provider-validation.en-US.md`
+
 ## Governance Rules
 
 The assistant must:
@@ -47,4 +56,3 @@ Percentages such as 5% or 10% may be generated only when tied to at least one of
 - user-authored strategy rule
 - predefined decision template
 - backtest / simulation result
-

@@ -1,0 +1,24 @@
+# Internal Modules
+
+This directory contains fund assistant application modules. Business objects live here, not in Athena core.
+
+## Subdirectory Index
+
+- `../cmd/`
+  - Runnable process entrypoints.
+- `data/`
+  - Data provider interface plus mock provider implementations for MVP development.
+- `decision/`
+  - Deterministic decision matrix generation.
+- `domain/`
+  - Versionable domain models and validation rules.
+- `journal/`
+  - Decision journal persistence boundary.
+- `server/`
+  - Standard-library HTTP API mapping.
+
+## Maintenance Notes
+
+- Keep fund business objects in this repository.
+- Keep Athena integration at API / SDK / tool-contract boundaries.
+- Preserve source metadata for every data-driven output.

@@ -16,6 +16,18 @@ Existing single-language planning documents remain as seed drafts until they are
 
 ## Planning Docs
 
+- `api.zh-CN.md`
+  - fund assistant MVP 后端当前已实现 API 的中文契约。
+- `api.en-US.md`
+  - English contract for the currently implemented fund assistant MVP backend API.
+- `local-runtime.zh-CN.md`
+  - fund assistant MVP 当前本地运行和 Docker Compose 中文说明。
+- `local-runtime.en-US.md`
+  - English local runtime and Docker Compose guide for the current fund assistant MVP.
+- `provider-validation.zh-CN.md`
+  - 信息获取 tool 和市场数据 provider 的先验证后编码中文规则。
+- `provider-validation.en-US.md`
+  - English validation-first rule for information tools and market-data providers.
 - `platform-mvp-plan.zh-CN.md`
   - Athena + fund assistant 双服务 MVP 中文执行计划。
 - `platform-mvp-plan.en-US.md`
