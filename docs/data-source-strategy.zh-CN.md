@@ -1,8 +1,10 @@
-# 中美基金/ETF 数据源策略
+# 中美基金、ETF 与美股数据源策略
 
 ## 目标
 
 MVP 需要真实基金/市场数据，但不能把授权不清晰的数据源默认为生产依赖。数据接入必须经过 provider interface，并且每条数据都保留来源、时间、授权和置信度 metadata。
+
+美股数据必须作为一等数据域处理，而不是只作为“美股 ETF”的补充字段。国内用户持有的 QDII、纳指、标普、海外科技、美元债或美股主题基金，都需要底层美股个股、ETF、指数、汇率和交易日历数据参与分析。
 
 ## 必需 metadata
 
@@ -101,15 +103,27 @@ MVP 需要真实基金/市场数据，但不能把授权不清晰的数据源默
 - https://docs.static.szse.cn/www/marketServices/technicalservice/notice/W020190408723859697048.pdf
 - https://www.sseinfo.com/services/assortment/document/
 
-## 美股 ETF / 指数数据候选
+## 美股股票 / ETF / 指数数据候选
+
+### 美股数据范围
+
+MVP 美股 provider 至少需要覆盖：
+
+- 美股个股：例如大型科技股、行业龙头、ADR 或基金重仓股。
+- 美股 ETF：例如标普、纳指、行业、债券、黄金、美元资产相关 ETF。
+- 美股指数：例如 S&P 500、NASDAQ 100、Dow Jones、Russell 2000 等。
+- 汇率：至少覆盖 USD/CNY，用于人民币持仓和美元资产的统一收益归因。
+- 交易日历与时区：统一处理 `America/New_York`、美国节假日、半日交易、盘前盘后和数据延迟。
+
+这些数据只服务于基金投研和组合分析，不用于自动交易、盘口撮合或券商交易指令。
 
 ### Alpha Vantage
 
-定位：美股 ETF / 指数第一优先 live provider 候选。
+定位：美股股票 / ETF / 指数第一优先 live provider 候选。
 
 依据：
 
-- 官方文档覆盖股票、ETF、共同基金、市场指数、技术指标等 API。
+- 官方文档覆盖股票、ETF、共同基金、市场指数、外汇、技术指标等 API。
 - Alpha Vantage 提供免费 API key 路径，适合 MVP 验证。
 - 官方还提供面向 AI agent 的 MCP server 入口。
 
@@ -121,7 +135,7 @@ MVP 需要真实基金/市场数据，但不能把授权不清晰的数据源默
 建议：
 
 - 第一版实现 `alpha_vantage_provider`。
-- 默认用于美股 ETF 日线、基础 quote、指数和技术指标。
+- 默认用于美股个股 / ETF 日线、基础 quote、指数、USD/CNY 汇率和技术指标。
 - 缓存到 Redis，避免超额度。
 
 参考：
@@ -131,11 +145,11 @@ MVP 需要真实基金/市场数据，但不能把授权不清晰的数据源默
 
 ### Financial Modeling Prep
 
-定位：美股 ETF / mutual fund information 与补充行情 provider 候选。
+定位：美股股票 / ETF / mutual fund information 与补充行情 provider 候选。
 
 依据：
 
-- 官方文档提供 ETF & Mutual Fund Information API。
+- 官方文档提供 ETF & Mutual Fund Information API，并覆盖股票 quote / historical price 等市场数据接口。
 - Pricing 文档说明 free plan 存在带宽限制。
 - Pricing 文档明确 FMP 数据展示或再分发需要单独 Data Display and Licensing Agreement。
 
@@ -189,7 +203,7 @@ MVP 需要真实基金/市场数据，但不能把授权不清晰的数据源默
 
 风险：
 
-- 具体 dataset 是否免费、是否覆盖目标 ETF/指数、是否允许展示，需要逐个 dataset 确认。
+- 具体 dataset 是否免费、是否覆盖目标股票 / ETF / 指数、是否允许展示，需要逐个 dataset 确认。
 
 建议：
 
@@ -270,7 +284,10 @@ Provider 必须实现：
 - `GetFundSnapshot`
 - `GetMarketSnapshot`
 - `GetHistoricalPrices`
+- `GetEquitySnapshot`
 - `GetIndexSnapshot`
+- `GetFxRate`
+- `GetMarketCalendar`
 - `GetProviderStatus`
 
 Provider 返回值必须包含：
@@ -287,4 +304,3 @@ Provider 返回值必须包含：
 - Redis 用于缓存 provider 响应、速率限制状态和异步 refresh 状态。
 - PostgreSQL 保存标准化后的 snapshot、journal evidence snapshot 和用户选择。
 - 不把未经授权的 raw payload 作为可再分发资产长期保存。
-
