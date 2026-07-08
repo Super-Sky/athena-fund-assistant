@@ -36,7 +36,7 @@
 - Portfolio / PortfolioHolding。
 - FundInstrument / FundSnapshot / MarketSnapshot。
 - 中国基金/ETF 数据 provider。
-- 美股 ETF/指数数据 provider。
+- 美股股票/ETF/指数/汇率/交易日历数据 provider。
 - 基金体检。
 - 稳健 / 均衡 / 激进三档决策矩阵。
 - 决策日志。
@@ -90,7 +90,7 @@
 交付：
 
 - 中国基金/ETF provider。
-- 美股 ETF/指数 provider。
+- 美股股票/ETF/指数/汇率/交易日历 provider。
 - 数据 freshness / timezone / delay / license metadata。
 - provider interface 与缓存层。
 - 数据源失败 fallback。
@@ -98,7 +98,7 @@
 验收：
 
 - 至少一个中国数据路径可拉取真实基金或 ETF 数据。
-- 至少一个美股数据路径可拉取真实 ETF 或指数数据。
+- 至少一个美股数据路径可拉取真实个股、ETF 或指数数据，并能提供 USD/CNY 汇率或明确标记汇率缺失。
 - 每条数据保留 `source`、`fetched_at`、`market_time`、`timezone`、`delay`、`provider`、`license_terms`、`confidence`、`schema_version`。
 - 如果使用临时 mock/CSV，UI 必须明确标记。
 
@@ -143,7 +143,7 @@
 
 - `Runtime Agent`：Athena agent loop、tool call、trace、memory、governance API。
 - `Finance Domain Agent`：fund app 领域模型与决策矩阵。
-- `Data Provider Agent`：中国与美股数据源 provider。
+- `Data Provider Agent`：中国基金 / ETF 与美股股票 / ETF / 指数 / 汇率 / 交易日历 provider。
 - `UI Agent`：fund assistant 前端。
 - `Docker Agent`：双服务 Docker / Compose。
 - `Governance Agent`：金融输出治理、数据授权标记、文档双语同步。
@@ -154,7 +154,6 @@
 
 - 免费数据源不等于可商用或可再分发。
 - 中国基金数据的授权边界比美股 API 更不清晰。
-- 美股数据必须处理 `America/New_York` 时区、非交易日和延迟。
+- 美股数据必须处理 `America/New_York` 时区、非交易日、半日交易、延迟和 USD/CNY 汇率。
 - 不能把单一路径买卖结论作为默认输出。
 - 百分比必须来自用户画像、组合约束、策略模板、历史数据或明确规则。
-
