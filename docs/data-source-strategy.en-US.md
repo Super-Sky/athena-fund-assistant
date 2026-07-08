@@ -1,8 +1,10 @@
-# China And US Fund/ETF Data Source Strategy
+# China Fund, ETF, And US Market Data Source Strategy
 
 ## Goal
 
 The MVP needs real fund and market data, but data sources with unclear licensing must not become default production dependencies. Every data integration must go through a provider interface and preserve source, timing, licensing, and confidence metadata.
+
+US market data must be treated as a first-class data domain, not merely as a supplement to US ETFs. Domestic users who hold QDII, NASDAQ, S&P 500, overseas technology, USD bond, or US-themed funds need underlying US equities, ETFs, indices, FX rates, and market calendars for credible analysis.
 
 ## Required Metadata
 
@@ -102,15 +104,27 @@ References:
 - https://docs.static.szse.cn/www/marketServices/technicalservice/notice/W020190408723859697048.pdf
 - https://www.sseinfo.com/services/assortment/document/
 
-## US ETF / Index Data Candidates
+## US Equity / ETF / Index Data Candidates
+
+### US Data Scope
+
+The MVP US provider should cover at least:
+
+- US equities: large-cap technology names, sector leaders, ADRs, and fund-heavy holdings.
+- US ETFs: S&P 500, NASDAQ, sector, bond, gold, and USD-asset ETFs.
+- US indices: S&P 500, NASDAQ 100, Dow Jones, Russell 2000, and similar benchmarks.
+- FX rates: at least USD/CNY for unified return attribution between RMB holdings and USD assets.
+- Market calendar and timezone: `America/New_York`, US holidays, half trading days, extended-hours status, and delayed feeds.
+
+These data are used only for fund research and portfolio analysis, not for automated trading, order routing, or brokerage instructions.
 
 ### Alpha Vantage
 
-Position: first-priority live provider candidate for US ETFs and indices.
+Position: first-priority live provider candidate for US equities, ETFs, and indices.
 
 Evidence:
 
-- Official docs cover stocks, ETFs, mutual funds, market indices, and technical indicators.
+- Official docs cover stocks, ETFs, mutual funds, market indices, FX, and technical indicators.
 - Alpha Vantage provides a free API-key path suitable for MVP validation.
 - Alpha Vantage also offers an official MCP server entry for AI-agent use cases.
 
@@ -122,7 +136,7 @@ Risks:
 Recommendation:
 
 - Implement `alpha_vantage_provider` first.
-- Default to US ETF daily prices, basic quotes, indices, and technical indicators.
+- Default to US equity / ETF daily prices, basic quotes, indices, USD/CNY FX rates, and technical indicators.
 - Cache responses in Redis to avoid quota pressure.
 
 References:
@@ -132,11 +146,11 @@ References:
 
 ### Financial Modeling Prep
 
-Position: candidate provider for US ETF / mutual-fund information and supplemental quotes.
+Position: candidate provider for US equity / ETF / mutual-fund information and supplemental quotes.
 
 Evidence:
 
-- Official docs include an ETF & Mutual Fund Information API.
+- Official docs include an ETF & Mutual Fund Information API and market-data endpoints such as stock quotes / historical prices.
 - Pricing docs describe free-plan bandwidth limits.
 - Pricing docs state that displaying or redistributing FMP data requires a Data Display and Licensing Agreement.
 
@@ -190,7 +204,7 @@ Evidence:
 
 Risks:
 
-- Each dataset must be checked for free availability, ETF/index coverage, and display rights.
+- Each dataset must be checked for free availability, equity / ETF / index coverage, and display rights.
 
 Recommendation:
 
@@ -271,7 +285,10 @@ Providers must implement:
 - `GetFundSnapshot`
 - `GetMarketSnapshot`
 - `GetHistoricalPrices`
+- `GetEquitySnapshot`
 - `GetIndexSnapshot`
+- `GetFxRate`
+- `GetMarketCalendar`
 - `GetProviderStatus`
 
 Provider responses must include:
@@ -288,4 +305,3 @@ Provider responses must include:
 - Redis stores provider responses, rate-limit state, and async refresh state.
 - PostgreSQL stores normalized snapshots, journal evidence snapshots, and user selections.
 - Unauthorized raw payloads must not be stored as long-lived redistributable assets.
-
