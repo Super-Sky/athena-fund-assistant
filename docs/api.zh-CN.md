@@ -11,6 +11,7 @@
 - 默认监听地址：`:8081`
 - 可通过环境变量 `ATHENA_FUND_API_ADDR` 覆盖。
 - 请求和响应均为 JSON。
+- API 允许本地 Web 开发源访问，当前 CORS 覆盖 `localhost` / `127.0.0.1` 的端口化 origin。
 - mock 数据必须在 trace 中显示 `mock_data_temporary=true`。
 - 金融输出必须包含多方案、依据、风险、反证条件和复盘时间。
 

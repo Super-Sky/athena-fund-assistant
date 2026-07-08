@@ -11,6 +11,7 @@ This API belongs to the fund assistant business application layer, not Athena co
 - Default listen address: `:8081`
 - Override with `ATHENA_FUND_API_ADDR`.
 - Requests and responses are JSON.
+- The API allows local web-development origins; current CORS support covers port-qualified `localhost` / `127.0.0.1` origins.
 - Mock data must surface `mock_data_temporary=true` in trace output.
 - Financial output must include multiple options, evidence, risks, invalidation conditions, and review timing.
 

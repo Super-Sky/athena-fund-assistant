@@ -77,6 +77,26 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 	}
 }
 
+func TestCORSPreflightForLocalWeb(t *testing.T) {
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+	}).Routes()
+
+	req := httptest.NewRequest(http.MethodOptions, "/api/analysis/fund", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	rr := httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("preflight status=%d", rr.Code)
+	}
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:5173" {
+		t.Fatalf("unexpected allow origin %q", got)
+	}
+}
+
 func performJSON(t *testing.T, handler http.Handler, method, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 	payload, err := json.Marshal(body)
