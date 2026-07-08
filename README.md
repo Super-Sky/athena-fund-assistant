@@ -52,11 +52,12 @@ The assistant should provide clear, actionable scenarios, not vague disclaimers.
 This repository now contains the first local Go API slice for the fund assistant MVP:
 
 - fund analysis endpoint
+- React + TypeScript + Vite research console
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
 - in-memory decision journal and review task
 
-The current implementation is still local-first and mock-data-backed. Docker Compose already starts the API, PostgreSQL, and Redis, but the API does not persist to PostgreSQL or cache through Redis yet. React UI, Athena runtime integration, and real data providers remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis, but the API does not persist to PostgreSQL or cache through Redis yet. Athena runtime integration and real data providers remain active MVP work.
 
 ## Local Run
 
@@ -64,7 +65,15 @@ The current implementation is still local-first and mock-data-backed. Docker Com
 ATHENA_FUND_API_ADDR=:8081 go run ./cmd/api
 ```
 
-Docker Compose is also available for the API, PostgreSQL, and Redis:
+Run the web console during development:
+
+```bash
+cd apps/web
+yarn install
+yarn dev
+```
+
+Docker Compose is also available for the web console, API, PostgreSQL, and Redis:
 
 ```bash
 cp .env.example .env

@@ -16,6 +16,10 @@ Existing single-language planning documents remain as seed drafts until they are
 
 ## Planning Docs
 
+- `features/feature-fund-assistant-web.zh-CN.md`
+  - 基金助手 Web MVP 当前实现的中文说明、边界和验收证据。
+- `features/feature-fund-assistant-web.en-US.md`
+  - English description, boundaries, and verification evidence for the current fund assistant web MVP.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`

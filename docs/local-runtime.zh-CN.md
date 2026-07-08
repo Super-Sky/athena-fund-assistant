@@ -4,6 +4,7 @@
 
 本文记录 athena-fund-assistant MVP 当前本地运行方式。第一版运行拓扑包含：
 
+- React + TypeScript + Vite Web
 - Go API
 - PostgreSQL
 - Redis
@@ -24,6 +25,16 @@ ATHENA_FUND_API_ADDR=:8081 go run ./cmd/api
 curl http://127.0.0.1:8081/healthz
 ```
 
+## 直接运行 Web
+
+```bash
+cd apps/web
+yarn install
+yarn dev
+```
+
+Vite 默认监听 `http://127.0.0.1:5173`，并把 `/api` 与 `/healthz` 代理到 `http://127.0.0.1:8081`。
+
 ## Docker Compose
 
 ```bash
@@ -33,6 +44,7 @@ docker compose up --build
 
 默认端口：
 
+- Web: `5173`
 - API: `8081`
 - PostgreSQL: `5433`
 - Redis: `6380`
@@ -41,4 +53,4 @@ docker compose up --build
 
 - API 容器会读取 `DATABASE_URL` 和 `REDIS_URL`，但当前代码尚未连接这两个服务。
 - 当前 mock 数据必须在 UI / trace 中继续标记为临时数据。
-- 当前 compose 只覆盖 fund assistant；Athena 双服务联调将在 Athena API 对接后补齐。
+- 当前 Web 只调用 fund assistant API；Athena 双服务联调将在 Athena API 对接后补齐。

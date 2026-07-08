@@ -1,4 +1,14 @@
 services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "${ATHENA_FUND_WEB_PORT:-5173}:80"
+    depends_on:
+      api:
+        condition: service_started
+
   api:
     build:
       context: .
