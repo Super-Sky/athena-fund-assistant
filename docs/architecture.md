@@ -24,26 +24,35 @@ athena-fund-assistant
   product-specific governance
 ```
 
-## Planned Local Modules
+## Current Local Modules
 
 ```text
 apps/web
-  user-facing fund research workspace
+  React + TypeScript fund research workspace
 
-apps/api
-  product API, auth, portfolio storage, Athena client facade
+cmd/api
+  local HTTP API process
 
-packages/domain
+cmd/providerprobe
+  validation-first real data-source probe command
+
+internal/domain
   InvestorProfile, Portfolio, FundInstrument, DecisionMatrix, DecisionJournal
 
-packages/data-providers
-  fund data, market data, index data, news, announcement adapters
+internal/data
+  provider interface, validation report, mock fund and market data
 
-packages/decision-engine
+internal/providerprobe
+  validation-only probes for real data-source response shapes
+
+internal/decision
   conservative / balanced / aggressive option generation
 
-packages/athena-client
-  Athena run, tool, memory, trace, governance API client
+internal/journal
+  decision journal storage boundary
+
+internal/server
+  HTTP route mapping and local CORS boundary
 ```
 
 ## Domain Objects
@@ -64,4 +73,3 @@ packages/athena-client
 ## Core Rule
 
 Fund business objects live in this repository. Athena only receives generic goals, tools, context assets, memory entries, and trace metadata.
-

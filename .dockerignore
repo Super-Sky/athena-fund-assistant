@@ -1,0 +1,14 @@
+.git
+.DS_Store
+node_modules
+dist
+build
+coverage
+apps/web/node_modules
+apps/web/dist
+tmp
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
