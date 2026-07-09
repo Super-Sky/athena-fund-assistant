@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
@@ -44,12 +45,17 @@ func main() {
 	} else {
 		log.Printf("account store using in-memory demo data")
 	}
+	conversationStore, err := conversation.NewMemoryStore(getenv("ATHENA_FUND_UPLOAD_DIR", ""))
+	if err != nil {
+		log.Fatalf("conversation store initialization failed: %v", err)
+	}
 
 	svc := server.New(server.Dependencies{
 		Provider:      provider,
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      accountStore,
+		Conversations: conversationStore,
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)

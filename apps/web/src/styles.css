@@ -269,6 +269,116 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+.agent-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.35fr) minmax(300px, 0.8fr);
+  gap: 18px;
+  margin: 0 auto 18px;
+  max-width: 1480px;
+}
+
+.agent-chat,
+.agent-side {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  gap: 14px;
+  padding: 18px;
+  background: rgb(255 253 248 / 94%);
+  box-shadow: var(--shadow);
+}
+
+.agent-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 10px;
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: end;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 900;
+  overflow: hidden;
+  position: relative;
+}
+
+.upload-button input {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.skill-copy,
+.empty-copy {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.message-list,
+.attachment-list,
+.trace-timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.message-row,
+.attachment-row,
+.trace-event {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  gap: 5px;
+  padding: 10px 12px;
+  background: #fffaf0;
+}
+
+.message-row strong,
+.attachment-row strong,
+.trace-event strong {
+  color: var(--green);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.message-row span,
+.attachment-row span,
+.trace-event span {
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.message-row.muted span,
+.attachment-row small,
+.trace-event small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.trace-event.pending,
+.trace-event.unsupported {
+  border-color: rgb(154 100 27 / 26%);
+  background: var(--amber-soft);
+}
+
+.trace-event.ok {
+  border-color: rgb(23 107 82 / 24%);
+  background: var(--green-soft);
+}
+
 .account-head,
 .account-body {
   display: flex;
@@ -716,7 +826,8 @@ textarea:focus {
 @media (max-width: 1180px) {
   .workspace,
   .snapshot-grid,
-  .account-body {
+  .account-body,
+  .agent-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -752,6 +863,7 @@ textarea:focus {
   .option-grid,
   .metric-row,
   .account-metrics,
+  .agent-controls,
   .holding-row,
   .trend-strip {
     grid-template-columns: 1fr;

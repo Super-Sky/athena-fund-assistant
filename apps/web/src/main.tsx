@@ -183,6 +183,55 @@ type AccountOverview = {
   };
 };
 
+type ConversationSkill = {
+  id: string;
+  name: string;
+  description: string;
+  tool_names: string[] | null;
+  enabled: boolean;
+};
+
+type ConversationAttachment = {
+  id: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  status: string;
+  unsupported: boolean;
+  retention_until: string;
+};
+
+type ConversationMessage = {
+  id: string;
+  role: string;
+  content: string;
+  skill_id: string;
+  attachment_ids?: string[];
+  created_at: string;
+};
+
+type ConversationTraceEvent = {
+  id: string;
+  kind: string;
+  status: string;
+  summary: string;
+  metadata?: Record<string, string>;
+  created_at: string;
+};
+
+type ConversationDetail = {
+  session: {
+    id: string;
+    user_id: string;
+    skill_id: string;
+    title: string;
+    status: string;
+  };
+  messages: ConversationMessage[];
+  attachments: ConversationAttachment[];
+  trace: ConversationTraceEvent[];
+};
+
 type InstrumentPreset = {
   code: string;
   name: string;
@@ -260,6 +309,12 @@ function App() {
   const [notes, setNotes] = useState("按本轮策略执行前，先确认数据源仍为 mock；真实资金操作需自行复核。");
   const [journal, setJournal] = useState<JournalResponse | null>(null);
   const [accountOverview, setAccountOverview] = useState<AccountOverview | null>(null);
+  const [skills, setSkills] = useState<ConversationSkill[]>([]);
+  const [conversation, setConversation] = useState<ConversationDetail | null>(null);
+  const [selectedSkillID, setSelectedSkillID] = useState("fund_research");
+  const [chatInput, setChatInput] = useState("请结合我的账户收益和持仓，给出今天应该复盘的重点。");
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
@@ -287,6 +342,35 @@ function App() {
       .finally(() => {
         if (!cancelled) {
           setLoadingAccount(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchJSON<{ items: ConversationSkill[] }>("/api/conversations/skills", { method: "GET" })
+      .then((response) => {
+        if (!cancelled) {
+          setSkills(response.items);
+          const first = response.items.find((item) => item.enabled);
+          if (first) {
+            setSelectedSkillID(first.id);
+            return createConversation(first.id);
+          }
+        }
+        return null;
+      })
+      .then((response) => {
+        if (!cancelled && response) {
+          setConversation(response);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
         }
       });
     return () => {
@@ -352,6 +436,80 @@ function App() {
     }
   }
 
+  async function createConversation(skillID: string) {
+    return fetchJSON<ConversationDetail>("/api/conversations", {
+      method: "POST",
+      body: JSON.stringify({
+        skill_id: skillID,
+        title: "日常基金 Agent 工作台",
+        user_id: "demo-user"
+      })
+    });
+  }
+
+  async function changeSkill(skillID: string) {
+    setSelectedSkillID(skillID);
+    if (!conversation) {
+      const created = await createConversation(skillID);
+      setConversation(created);
+    }
+  }
+
+  async function uploadAttachment(file: File | null) {
+    if (!file || !conversation) {
+      return;
+    }
+    setUploadingAttachment(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("user_id", "demo-user");
+      const response = await fetch(`${API_BASE}/api/conversations/${conversation.session.id}/attachments`, {
+        body: form,
+        method: "POST"
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? `upload failed with ${response.status}`);
+      }
+      const detail = await fetchJSON<ConversationDetail>(`/api/conversations/${conversation.session.id}`, { method: "GET" });
+      setConversation(detail);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }
+
+  async function sendMessage() {
+    if (!conversation || !chatInput.trim()) {
+      return;
+    }
+    setSendingMessage(true);
+    setError(null);
+    try {
+      const pendingAttachmentIDs = conversation.attachments
+        .filter((attachment) => attachment.status === "pending_parse" || attachment.unsupported)
+        .map((attachment) => attachment.id);
+      const detail = await fetchJSON<ConversationDetail>(`/api/conversations/${conversation.session.id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          attachment_ids: pendingAttachmentIDs,
+          content: chatInput,
+          role: "user",
+          skill_id: selectedSkillID
+        })
+      });
+      setConversation(detail);
+      setChatInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSendingMessage(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -367,6 +525,19 @@ function App() {
       </header>
 
       <AccountDashboard overview={accountOverview} loading={loadingAccount} />
+
+      <AgentWorkspace
+        conversation={conversation}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSend={sendMessage}
+        onSkillChange={changeSkill}
+        onUpload={uploadAttachment}
+        selectedSkillID={selectedSkillID}
+        sending={sendingMessage}
+        skills={skills}
+        uploading={uploadingAttachment}
+      />
 
       <section className="workspace">
         <form className="control-panel" onSubmit={runAnalysis}>
@@ -582,6 +753,122 @@ function AccountDashboard({ loading, overview }: { loading: boolean; overview: A
             <div className="trend-point" key={point.date}>
               <span>{point.date.slice(5)}</span>
               <strong className={point.total_pnl >= 0 ? "positive" : "negative"}>{signedPct(point.total_pnl_pct)}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AgentWorkspace({
+  conversation,
+  input,
+  onInputChange,
+  onSend,
+  onSkillChange,
+  onUpload,
+  selectedSkillID,
+  sending,
+  skills,
+  uploading
+}: {
+  conversation: ConversationDetail | null;
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onSkillChange: (value: string) => void;
+  onUpload: (file: File | null) => void;
+  selectedSkillID: string;
+  sending: boolean;
+  skills: ConversationSkill[];
+  uploading: boolean;
+}) {
+  const selectedSkill = skills.find((skill) => skill.id === selectedSkillID);
+  return (
+    <section className="agent-workspace">
+      <div className="agent-chat">
+        <PanelTitle icon="activity" title="Agent 对话" caption="选择 skill，上传材料，发起日常基金复盘" />
+        <div className="agent-controls">
+          <label className="field">
+            <span>Skill</span>
+            <select value={selectedSkillID} onChange={(event) => onSkillChange(event.target.value)}>
+              {skills.map((skill) => (
+                <option disabled={!skill.enabled} key={skill.id} value={skill.id}>
+                  {skill.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="upload-button">
+            <Icon name="database" />
+            {uploading ? "上传中" : "上传图片/文件"}
+            <input
+              disabled={!conversation || uploading}
+              onChange={(event) => {
+                onUpload(event.target.files?.[0] ?? null);
+                event.currentTarget.value = "";
+              }}
+              type="file"
+            />
+          </label>
+        </div>
+        {selectedSkill ? (
+          <p className="skill-copy">
+            {selectedSkill.description} · tools: {(selectedSkill.tool_names ?? []).join(", ")}
+          </p>
+        ) : null}
+        <div className="message-list">
+          {(conversation?.messages ?? []).length > 0 ? (
+            conversation?.messages.map((message) => (
+              <div className="message-row" key={message.id}>
+                <strong>{message.role}</strong>
+                <span>{message.content}</span>
+              </div>
+            ))
+          ) : (
+            <div className="message-row muted">
+              <strong>system</strong>
+              <span>工作台已准备好。附件上传后会先作为 pending metadata，不会被当成已解析事实。</span>
+            </div>
+          )}
+        </div>
+        <label className="field">
+          <span>消息</span>
+          <textarea value={input} onChange={(event) => onInputChange(event.target.value)} />
+        </label>
+        <button className="primary-action" disabled={!conversation || sending} onClick={onSend} type="button">
+          <Icon name="play" />
+          {sending ? "发送中" : "发送到 Agent"}
+        </button>
+      </div>
+
+      <div className="agent-side">
+        <PanelTitle icon="note" title="附件与 Trace" caption="上传状态、工具调用边界和 Athena 对接占位" />
+        <div className="attachment-list">
+          {(conversation?.attachments ?? []).length > 0 ? (
+            conversation?.attachments.map((attachment) => (
+              <div className="attachment-row" key={attachment.id}>
+                <strong>{attachment.file_name}</strong>
+                <span>
+                  {attachment.status}
+                  {attachment.unsupported ? " · unsupported" : " · pending"}
+                </span>
+                <small>{formatBytes(attachment.size_bytes)} · retain until {formatDate(attachment.retention_until)}</small>
+              </div>
+            ))
+          ) : (
+            <p className="empty-copy">暂无附件。支持图片、PDF、CSV、TXT；未解析前只进入 metadata。</p>
+          )}
+        </div>
+        <div className="trace-timeline">
+          {(conversation?.trace ?? []).map((event) => (
+            <div className={`trace-event ${event.status}`} key={event.id}>
+              <strong>{event.kind}</strong>
+              <span>{event.summary}</span>
+              <small>
+                {event.status} · {formatDate(event.created_at)}
+              </small>
             </div>
           ))}
         </div>
@@ -848,6 +1135,16 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatBytes(value: number) {
+  if (value < 1024) {
+    return `${value} B`;
+  }
+  if (value < 1024 * 1024) {
+    return `${formatNumber(value / 1024)} KB`;
+  }
+  return `${formatNumber(value / 1024 / 1024)} MB`;
 }
 
 createRoot(document.getElementById("root")!).render(

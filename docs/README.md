@@ -24,6 +24,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 账户收益看板第一片的中文说明、边界和后续持久化计划。
 - `features/feature-account-dashboard.en-US.md`
   - English description, boundaries, and persistence follow-up plan for the first account dashboard slice.
+- `features/feature-agent-workspace.zh-CN.md`
+  - Agent 对话工作台、skill 选择、附件上传和 trace timeline 的中文说明。
+- `features/feature-agent-workspace.en-US.md`
+  - English description for the Agent workspace, skill selection, attachment upload, and trace timeline.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`

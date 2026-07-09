@@ -3,12 +3,14 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
@@ -16,11 +18,16 @@ import (
 )
 
 func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
 	srv := New(Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
 	}).Routes()
 
 	analysis := analysisRequest{
@@ -81,11 +88,16 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 }
 
 func TestCORSPreflightForLocalWeb(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
 	srv := New(Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
 	}).Routes()
 
 	req := httptest.NewRequest(http.MethodOptions, "/api/analysis/fund", nil)
@@ -102,11 +114,16 @@ func TestCORSPreflightForLocalWeb(t *testing.T) {
 }
 
 func TestAccountOverviewAndManualHoldingWorkflow(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
 	srv := New(Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
 	}).Routes()
 
 	overviewRR := httptest.NewRecorder()
@@ -163,6 +180,86 @@ func TestAccountOverviewAndManualHoldingWorkflow(t *testing.T) {
 	}
 	if replaced.Holdings[0].Metadata.Timezone == "" {
 		t.Fatalf("holding metadata missing timezone: %#v", replaced.Holdings[0].Metadata)
+	}
+}
+
+func TestConversationWorkspaceWorkflow(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
+	}).Routes()
+
+	skillsRR := httptest.NewRecorder()
+	srv.ServeHTTP(skillsRR, httptest.NewRequest(http.MethodGet, "/api/conversations/skills", nil))
+	if skillsRR.Code != http.StatusOK {
+		t.Fatalf("skills status=%d body=%s", skillsRR.Code, skillsRR.Body.String())
+	}
+
+	createRR := performJSON(t, srv, http.MethodPost, "/api/conversations", createConversationRequest{
+		UserID:  "demo-user",
+		SkillID: "document_intake",
+		Title:   "账单解析",
+	})
+	if createRR.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createRR.Code, createRR.Body.String())
+	}
+	var detail domain.ConversationDetail
+	if err := json.Unmarshal(createRR.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("decode conversation: %v", err)
+	}
+
+	var uploadBody bytes.Buffer
+	writer := multipart.NewWriter(&uploadBody)
+	part, err := writer.CreateFormFile("file", "statement.txt")
+	if err != nil {
+		t.Fatalf("create multipart file: %v", err)
+	}
+	if _, err := part.Write([]byte("510300 holding note")); err != nil {
+		t.Fatalf("write multipart file: %v", err)
+	}
+	if err := writer.WriteField("user_id", "demo-user"); err != nil {
+		t.Fatalf("write multipart field: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	uploadReq := httptest.NewRequest(http.MethodPost, "/api/conversations/"+detail.Session.ID+"/attachments", &uploadBody)
+	uploadReq.Header.Set("Content-Type", writer.FormDataContentType())
+	uploadRR := httptest.NewRecorder()
+	srv.ServeHTTP(uploadRR, uploadReq)
+	if uploadRR.Code != http.StatusCreated {
+		t.Fatalf("upload status=%d body=%s", uploadRR.Code, uploadRR.Body.String())
+	}
+	var attachment domain.ConversationAttachment
+	if err := json.Unmarshal(uploadRR.Body.Bytes(), &attachment); err != nil {
+		t.Fatalf("decode attachment: %v", err)
+	}
+	if attachment.Status != "pending_parse" {
+		t.Fatalf("attachment = %#v", attachment)
+	}
+
+	messageRR := performJSON(t, srv, http.MethodPost, "/api/conversations/"+detail.Session.ID+"/messages", addConversationMessageRequest{
+		Role:          "user",
+		Content:       "请结合附件做一个复盘计划。",
+		SkillID:       "document_intake",
+		AttachmentIDs: []string{attachment.ID},
+	})
+	if messageRR.Code != http.StatusOK {
+		t.Fatalf("message status=%d body=%s", messageRR.Code, messageRR.Body.String())
+	}
+	var updated domain.ConversationDetail
+	if err := json.Unmarshal(messageRR.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("decode updated detail: %v", err)
+	}
+	if len(updated.Messages) != 1 || len(updated.Attachments) != 1 {
+		t.Fatalf("updated detail = %#v", updated)
 	}
 }
 

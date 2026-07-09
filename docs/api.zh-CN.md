@@ -86,6 +86,68 @@
 
 当前接口只表示手动记录和本地计算，不执行交易，不连接券商下单。
 
+## `GET /api/conversations/skills`
+
+返回 Agent 工作台可选 skill。
+
+响应字段：
+
+- `items`：skill 列表，每个 skill 包含 `id`、`name`、`description`、`tool_names` 和 `enabled`。
+
+当前内置 skill：
+
+- `fund_research`
+- `portfolio_review`
+- `document_intake`
+
+## `POST /api/conversations`
+
+创建一条对话 session。
+
+请求字段：
+
+- `user_id`
+- `skill_id`
+- `title`
+
+响应为 `ConversationDetail`，包含 `session`、`messages`、`attachments` 和 `trace`。
+
+## `GET /api/conversations/{conversation_id}`
+
+读取对话详情、消息、附件 metadata 和 trace timeline。
+
+## `POST /api/conversations/{conversation_id}/attachments`
+
+上传文件并返回附件 metadata。
+
+请求类型：`multipart/form-data`
+
+字段：
+
+- `file`
+- `user_id`
+
+上传边界：
+
+- 单文件最大 `10 MiB`。
+- 默认保留期 `7 天`。
+- `ATHENA_FUND_UPLOAD_DIR` 可配置上传目录；未设置时使用系统临时目录。
+- 当前只生成 metadata、SHA256、`pending_parse` / `unsupported` 状态，不解析附件内容。
+- 未解析附件不能作为已确认事实、账单或策略知识。
+
+## `POST /api/conversations/{conversation_id}/messages`
+
+追加一条工作台消息。
+
+请求字段：
+
+- `role`
+- `content`
+- `skill_id`
+- `attachment_ids`
+
+响应返回更新后的 `ConversationDetail`。当前会写入本地 trace；真实 Athena agent run 仍是 pending contract，不在本 slice 中调用 Athena。
+
 ## `POST /api/analysis/fund`
 
 根据用户画像、持仓和标的代码生成基金体检与三档决策矩阵。
@@ -144,4 +206,4 @@
 - 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- Redis、Athena agent run 对接、journal/review 持久化关联和真实 provider 是后续实现项。
+- Redis、Athena agent run 对接、附件解析/OCR/PDF/CSV parser、journal/review 持久化关联和真实 provider 是后续实现项。

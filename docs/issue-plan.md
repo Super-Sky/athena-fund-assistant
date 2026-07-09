@@ -160,7 +160,7 @@ Acceptance:
 - UI has conversation workspace, skill selector, upload entry, and trace timeline.
 - Backend has conversation/session/message/attachment metadata API.
 - Attachments are clearly marked pending/unsupported until parsed.
-- Athena remote tools are used for fund business actions.
+- Athena run / remote-tool execution is represented as a pending contract in this slice; real remote-tool execution remains a follow-up.
 
 ## Issue 17: User Preference agent.md And Fund Strategy Knowledge Base
 

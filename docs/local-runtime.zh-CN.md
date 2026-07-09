@@ -31,6 +31,12 @@ curl http://127.0.0.1:8081/healthz
 curl http://127.0.0.1:8081/api/accounts/demo-user/overview
 ```
 
+Agent 工作台 skill 检查：
+
+```bash
+curl http://127.0.0.1:8081/api/conversations/skills
+```
+
 PostgreSQL store 集成测试：
 
 ```bash
@@ -65,5 +71,6 @@ docker compose up --build
 ## 当前边界
 
 - API 容器会读取 `DATABASE_URL` 并用于账户看板持久化；`REDIS_URL` 当前仍预留给后续缓存和异步任务。
+- API 会读取 `ATHENA_FUND_UPLOAD_DIR` 作为附件上传目录；未设置时使用系统临时目录。
 - 当前 mock 数据必须在 UI / trace 中继续标记为临时数据。
 - 当前 Web 只调用 fund assistant API；Athena 双服务联调将在 Athena API 对接后补齐。

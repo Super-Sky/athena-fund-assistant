@@ -43,6 +43,9 @@ internal/domain
 internal/account
   account dashboard store interface and local demo account read model
 
+internal/conversation
+  Agent workspace sessions, selectable skills, messages, attachment metadata, and local trace events
+
 internal/data
   provider interface, validation report, mock fund and market data
 
@@ -67,6 +70,11 @@ internal/server
 - `AccountOperationRecord`
 - `AccountPerformancePoint`
 - `AccountOverview`
+- `ConversationSkill`
+- `ConversationSession`
+- `ConversationMessage`
+- `ConversationAttachment`
+- `ConversationTraceEvent`
 - `Portfolio`
 - `PortfolioHolding`
 - `FundInstrument`

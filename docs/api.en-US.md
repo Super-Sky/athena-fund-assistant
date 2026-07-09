@@ -86,6 +86,68 @@ Each holding must include:
 
 This endpoint only records manual data and local calculations. It does not trade, place brokerage orders, or connect to a brokerage order interface.
 
+## `GET /api/conversations/skills`
+
+Returns selectable Agent workspace skills.
+
+Response fields:
+
+- `items`: skill list. Each skill includes `id`, `name`, `description`, `tool_names`, and `enabled`.
+
+Current built-in skills:
+
+- `fund_research`
+- `portfolio_review`
+- `document_intake`
+
+## `POST /api/conversations`
+
+Creates a conversation session.
+
+Request fields:
+
+- `user_id`
+- `skill_id`
+- `title`
+
+The response is `ConversationDetail` with `session`, `messages`, `attachments`, and `trace`.
+
+## `GET /api/conversations/{conversation_id}`
+
+Reads conversation detail, messages, attachment metadata, and trace timeline.
+
+## `POST /api/conversations/{conversation_id}/attachments`
+
+Uploads a file and returns attachment metadata.
+
+Request type: `multipart/form-data`
+
+Fields:
+
+- `file`
+- `user_id`
+
+Upload boundaries:
+
+- Per-file limit is `10 MiB`.
+- Default retention window is `7 days`.
+- `ATHENA_FUND_UPLOAD_DIR` configures the upload directory; if unset, the system temp directory is used.
+- The current slice only generates metadata, SHA256, and `pending_parse` / `unsupported` status. It does not parse attachment content.
+- Unparsed attachments must not be treated as confirmed facts, statements, or strategy knowledge.
+
+## `POST /api/conversations/{conversation_id}/messages`
+
+Appends one workspace message.
+
+Request fields:
+
+- `role`
+- `content`
+- `skill_id`
+- `attachment_ids`
+
+The response returns the updated `ConversationDetail`. The current slice writes local trace events; the real Athena agent run is still a pending contract and is not called in this slice.
+
 ## `POST /api/analysis/fund`
 
 Generates fund diagnosis and a three-option decision matrix from the investor profile, portfolio, and target instrument code.
@@ -144,4 +206,4 @@ Response fields:
 - The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- Redis, Athena agent-run integration, persistent journal/review account links, and real providers are later implementation items.
+- Redis, Athena agent-run integration, attachment parsers/OCR/PDF/CSV parsing, persistent journal/review account links, and real providers are later implementation items.
