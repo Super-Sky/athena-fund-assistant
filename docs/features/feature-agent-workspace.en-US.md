@@ -50,3 +50,4 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - Browser smoke: workspace, skill selector, upload entry, and trace timeline are visible.
 - Server test: remote tool catalog, `account_overview`, `fund_market_snapshot`, and the unknown-tool error envelope.
 - Server test: conversation message starts an Athena mock run and writes an `athena_agent_run=ok` trace.
+- Dual-service smoke: `./scripts/smoke_dual_service.sh` starts Athena, the fund assistant, and a fake OpenAI-compatible model, then verifies Athena remote registry, the `account_overview` callback, and fund conversation trace writeback.

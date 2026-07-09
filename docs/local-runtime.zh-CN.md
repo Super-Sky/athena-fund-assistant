@@ -49,6 +49,25 @@ curl 'http://127.0.0.1:8081/internal/tools/catalog?base_url=http://127.0.0.1:808
 ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
 ```
 
+## 双服务 smoke
+
+使用本仓脚本可以在本机启动 Athena、fund assistant 和一个 fake OpenAI-compatible 模型，验证完整本地链路：
+
+```bash
+ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+```
+
+脚本会验证：
+
+- Athena `/healthz` 和 fund assistant `/healthz` 可访问。
+- fund assistant 的 `/internal/tools/catalog` 能生成 `account_overview` / `fund_market_snapshot` remote tool 注册。
+- Athena `/api/control-plane/remote-tools/:name` 接受两个只读工具。
+- fake model 触发 `account_overview` tool call。
+- Athena 通过 `remote_tool_execution.v1` 回调 fund assistant `/internal/tools/execute`。
+- fund conversation message 通过 Athena client 得到 `athena_agent_run=ok` trace，并记录 `run_status=completed`、`tool_call_count=1`、`output_present=true`。
+
+该 smoke 不需要真实模型 API key；它验证的是双服务 contract、tool registry、tool callback 和 trace 回写。真实模型供应商仍应通过 Athena 模型管理配置。
+
 PostgreSQL store 集成测试：
 
 ```bash

@@ -31,6 +31,8 @@ func (s *Server) startAthenaRunForMessage(ctx context.Context, conversationID st
 			"run_status":      status,
 			"trace_available": fmt.Sprintf("%t", result.TraceAvailable),
 			"stop_reason":     result.StopReason,
+			"tool_call_count": fmt.Sprintf("%d", len(result.ToolCalls)),
+			"output_present":  fmt.Sprintf("%t", strings.TrimSpace(result.Output) != ""),
 		},
 	})
 }
@@ -84,7 +86,6 @@ func buildAthenaRunRequest(conversationID string, req addConversationMessageRequ
 			"fund_assistant_no_guaranteed_returns",
 			"fund_assistant_source_metadata_required",
 		},
-		SessionID:    conversationID,
 		AppID:        "athena-fund-assistant",
 		AppSessionID: conversationID,
 		InputPayload: map[string]any{

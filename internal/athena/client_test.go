@@ -26,6 +26,7 @@ func TestHTTPClientStartRun(t *testing.T) {
 			RunID:          "run_1",
 			SessionID:      "session_1",
 			Status:         "completed",
+			ToolCalls:      []map[string]any{{"id": "call_1", "status": "completed"}},
 			TraceAvailable: true,
 		})
 	}))
@@ -52,7 +53,7 @@ func TestHTTPClientStartRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start run: %v", err)
 	}
-	if response.RunID != "run_1" || !response.TraceAvailable {
+	if response.RunID != "run_1" || !response.TraceAvailable || len(response.ToolCalls) != 1 {
 		t.Fatalf("response = %#v", response)
 	}
 	if captured.Goal != "Review fund account" || captured.Tools[0].Function.Name != "account_overview" {

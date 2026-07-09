@@ -49,6 +49,25 @@ Connect real Athena:
 ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
 ```
 
+## Dual-Service Smoke
+
+This repository includes a local smoke script that starts Athena, the fund assistant, and a fake OpenAI-compatible model to verify the full local contract:
+
+```bash
+ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+```
+
+The script verifies:
+
+- Athena `/healthz` and fund assistant `/healthz` are reachable.
+- The fund assistant `/internal/tools/catalog` emits `account_overview` / `fund_market_snapshot` remote tool registrations.
+- Athena `/api/control-plane/remote-tools/:name` accepts both read-only tools.
+- The fake model triggers an `account_overview` tool call.
+- Athena calls back into the fund assistant `/internal/tools/execute` through `remote_tool_execution.v1`.
+- A fund conversation message gets an `athena_agent_run=ok` trace with `run_status=completed`, `tool_call_count=1`, and `output_present=true`.
+
+This smoke does not require a real model API key. It validates the dual-service contract, tool registry, tool callback, and trace writeback. Real model providers should still be configured through Athena model management.
+
 PostgreSQL store integration test:
 
 ```bash

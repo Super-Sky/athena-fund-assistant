@@ -63,14 +63,15 @@ type ToolFunction struct {
 // RunResponse is the stable subset of Athena Agent Run response consumed by this app.
 // RunResponse 是本应用消费的 Athena Agent Run 响应稳定子集。
 type RunResponse struct {
-	RequestID      string         `json:"request_id,omitempty"`
-	RunID          string         `json:"run_id,omitempty"`
-	SessionID      string         `json:"session_id,omitempty"`
-	Status         string         `json:"status"`
-	StopReason     string         `json:"stop_reason,omitempty"`
-	Output         string         `json:"output,omitempty"`
-	TraceAvailable bool           `json:"trace_available"`
-	Metadata       map[string]any `json:"metadata,omitempty"`
+	RequestID      string           `json:"request_id,omitempty"`
+	RunID          string           `json:"run_id,omitempty"`
+	SessionID      string           `json:"session_id,omitempty"`
+	Status         string           `json:"status"`
+	StopReason     string           `json:"stop_reason,omitempty"`
+	Output         string           `json:"output,omitempty"`
+	ToolCalls      []map[string]any `json:"tool_calls,omitempty"`
+	TraceAvailable bool             `json:"trace_available"`
+	Metadata       map[string]any   `json:"metadata,omitempty"`
 }
 
 // HTTPClient calls Athena through its app-facing Agent Run API.

@@ -50,3 +50,4 @@
 - Browser smoke: 工作台、skill selector、上传入口和 trace timeline 可见。
 - Server test: remote tool catalog、`account_overview`、`fund_market_snapshot` 和 unknown-tool error envelope。
 - Server test: conversation message starts Athena mock run and writes `athena_agent_run=ok` trace。
+- Dual-service smoke: `./scripts/smoke_dual_service.sh` 启动 Athena、fund assistant 和 fake OpenAI-compatible 模型，验证 Athena remote registry、`account_overview` callback、fund conversation trace 回写。

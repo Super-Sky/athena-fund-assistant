@@ -158,6 +158,15 @@ The Agent Run request maps business semantics into generic Athena input:
 - `governance_refs`: no automatic trading, no guaranteed-return claims, and data-source metadata required.
 - `constraints`: no automatic trading, no brokerage order placement, risk and invalidation required, and no single absolute path conclusion.
 
+The current `athena_agent_run` trace metadata includes:
+
+- `run_id`
+- `run_status`
+- `trace_available`
+- `stop_reason`
+- `tool_call_count`
+- `output_present`
+
 ## `GET /internal/tools/catalog`
 
 Returns suggested tool registrations exposed by the fund assistant for Athena's remote tool registry.

@@ -55,11 +55,13 @@ This repository now contains the first local Go API slice for the fund assistant
 - React + TypeScript + Vite research console
 - local account performance dashboard
 - Agent conversation workspace with skill selection and attachment metadata
+- Athena Agent Run client facade with mock and HTTP modes
+- Athena remote business tool callbacks for read-only account and market data
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
 - in-memory decision journal and review task
 
-The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard uses PostgreSQL when `DATABASE_URL` is configured and falls back to an in-memory demo user otherwise. Account market data is still explicitly marked as temporary mock data. Athena runtime integration, journal/review persistence, and real data providers remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard uses PostgreSQL when `DATABASE_URL` is configured and falls back to an in-memory demo user otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client, read-only remote business tools, and a dual-service smoke path. Journal/review persistence and real data providers remain active MVP work.
 
 ## Local Run
 
@@ -80,4 +82,10 @@ Docker Compose is also available for the web console, API, PostgreSQL, and Redis
 ```bash
 cp .env.example .env
 docker compose up --build
+```
+
+Dual-service Athena smoke:
+
+```bash
+ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```

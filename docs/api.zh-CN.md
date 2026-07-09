@@ -158,6 +158,15 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `governance_refs`：无自动交易、无收益承诺、数据来源 metadata 必填。
 - `constraints`：禁止自动交易、禁止券商下单、必须包含风险和反证条件、禁止单一路径绝对结论。
 
+`athena_agent_run` trace metadata 当前包含：
+
+- `run_id`
+- `run_status`
+- `trace_available`
+- `stop_reason`
+- `tool_call_count`
+- `output_present`
+
 ## `GET /internal/tools/catalog`
 
 返回 fund assistant 暴露给 Athena remote tool registry 的工具注册建议。
