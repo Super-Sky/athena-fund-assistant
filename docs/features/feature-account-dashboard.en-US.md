@@ -10,6 +10,8 @@ This feature moves the fund assistant from a one-off fund analysis page toward a
   - Defines `UserAccount`, `AccountHoldingSnapshot`, `AccountOperationRecord`, `AccountPerformancePoint`, and `AccountOverview`.
 - `internal/account/store.go`
   - Provides the account store interface and a local `MemoryStore` seeded with `demo-user`.
+- `internal/account/postgres_store.go`
+  - Provides the PostgreSQL store, schema bootstrap, demo seed, holding replacement, and persisted trend points.
 - `GET /api/accounts/{user_id}/overview`
   - Returns the account homepage read model.
 - `POST /api/accounts/{user_id}/holdings`
@@ -19,19 +21,20 @@ This feature moves the fund assistant from a one-off fund analysis page toward a
 
 ## Boundaries
 
-- Account data is still local memory plus mock/demo data, with `trace.mock_data_temporary=true`.
+- Without `DATABASE_URL`, local runs use the in-memory demo store. Docker / DATABASE_URL environments use the PostgreSQL store.
+- Current account market data is still mock/demo data, with `trace.mock_data_temporary=true`.
 - The app does not store brokerage accounts, brokerage credentials, or order-placement capability.
 - Account authorization sync remains a future read-only direction, so `read_only_sync_available=false`.
 - CNY / USD holdings use `fx_to_base` to normalize into the account base currency instead of mixing US and China timelines without provenance.
 
 ## Follow-Up
 
-- Add PostgreSQL schema for users, accounts, holding snapshots, operation records, and journal/review links.
-- Move journal/review from memory storage to persistent storage.
+- Move journal/review from memory storage to persistent storage and link them to accounts/holdings.
 - Connect account holdings to real data providers and replace mock/demo prices and FX.
 - Integrate with Athena remote tools so the Agent can read account overview and write decision journals.
 
 ## Verification
 
 - `go test ./...`
+- `ATHENA_FUND_PG_TEST_DSN=... go test ./internal/account -run TestPostgresStoreOverviewAndReplaceHoldings -count=1`
 - `yarn build` in `apps/web`

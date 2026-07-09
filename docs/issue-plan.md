@@ -148,7 +148,7 @@ Acceptance:
 - User, account, holding snapshot, performance metric, and operation record domain models exist.
 - API can return account overview, performance trend, and recent operation summary.
 - UI homepage shows account performance and holdings.
-- PostgreSQL persistence is added for account, holdings, journal/review links in a follow-up slice.
+- PostgreSQL persistence is added for account, holdings, operations, and trend points; journal/review account links remain follow-up work.
 - Brokerage sync remains read-only future direction and no order interface is added.
 
 ## Issue 16: Agent Conversation Workspace With Skill And File Upload

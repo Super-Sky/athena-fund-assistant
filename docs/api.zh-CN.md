@@ -62,7 +62,7 @@
 - `read_only_sync_available`
 - `warnings`
 
-当前账户数据为本地 demo/mock 数据，不能冒充真实券商账户或真实收益。
+本地未设置 `DATABASE_URL` 时使用内存 demo store；Docker / `DATABASE_URL` 环境会使用 PostgreSQL store。当前行情和收益输入仍为 demo/mock 数据，不能冒充真实券商账户或真实收益。
 
 ## `POST /api/accounts/{user_id}/holdings`
 
@@ -141,7 +141,7 @@
 ## 当前边界
 
 - 当前 journal 使用内存存储，服务重启后会丢失。
-- 当前 account overview 使用内存存储和 demo/mock 数据，服务重启后会回到 demo seed。
+- 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- PostgreSQL、Redis、Athena agent run 对接和真实 provider 是后续实现项。
+- Redis、Athena agent run 对接、journal/review 持久化关联和真实 provider 是后续实现项。

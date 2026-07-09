@@ -62,7 +62,7 @@ The current `trace` includes:
 - `read_only_sync_available`
 - `warnings`
 
-Account data is currently local demo/mock data and must not be represented as a real brokerage account or real return record.
+Without `DATABASE_URL`, local runs use the in-memory demo store. Docker / `DATABASE_URL` environments use the PostgreSQL store. Current market and return inputs are still demo/mock data and must not be represented as a real brokerage account or real return record.
 
 ## `POST /api/accounts/{user_id}/holdings`
 
@@ -141,7 +141,7 @@ Response fields:
 ## Current Boundaries
 
 - The journal store is in-memory and is lost on service restart.
-- The account overview uses in-memory storage and demo/mock data, so it returns to the demo seed after service restart.
+- The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- PostgreSQL, Redis, Athena agent-run integration, and real providers are later implementation items.
+- Redis, Athena agent-run integration, persistent journal/review account links, and real providers are later implementation items.

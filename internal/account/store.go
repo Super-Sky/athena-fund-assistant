@@ -100,7 +100,14 @@ func (s *MemoryStore) overviewLocked(userID string) (domain.AccountOverview, err
 }
 
 func (s *MemoryStore) seedDemo() {
-	now := time.Now().UTC()
+	account, holdings, operations, trend := demoAccountData(time.Now().UTC())
+	s.accounts[account.UserID] = account
+	s.holdings[account.UserID] = holdings
+	s.operations[account.UserID] = operations
+	s.trends[account.UserID] = trend
+}
+
+func demoAccountData(now time.Time) (domain.UserAccount, []domain.AccountHoldingSnapshot, []domain.AccountOperationRecord, []domain.AccountPerformancePoint) {
 	metadata := demoMetadata(now)
 	account := domain.UserAccount{
 		UserID:       "demo-user",
@@ -160,10 +167,7 @@ func (s *MemoryStore) seedDemo() {
 			Metadata:       metadata,
 		},
 	}
-	s.accounts[account.UserID] = account
-	s.holdings[account.UserID] = normalized
-	s.operations[account.UserID] = operations
-	s.trends[account.UserID] = buildTrend(account.BaseCurrency, normalized, operations)
+	return account, normalized, operations, buildTrend(account.BaseCurrency, normalized, operations)
 }
 
 func normalizeHoldings(userID string, holdings []domain.AccountHoldingSnapshot) ([]domain.AccountHoldingSnapshot, error) {

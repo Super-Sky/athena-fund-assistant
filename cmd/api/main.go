@@ -28,12 +28,28 @@ func main() {
 		log.Fatalf("data provider validation failed: %+v", report.Checks)
 	}
 	log.Printf("data provider validation passed with %d checks", len(report.Checks))
+	var accountStore account.Store = account.NewMemoryStore()
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		postgresStore, err := account.NewPostgresStore(context.Background(), databaseURL)
+		if err != nil {
+			log.Fatalf("postgres account store initialization failed: %v", err)
+		}
+		defer func() {
+			if err := postgresStore.Close(); err != nil {
+				log.Printf("postgres account store close failed: %v", err)
+			}
+		}()
+		accountStore = postgresStore
+		log.Printf("account store using PostgreSQL")
+	} else {
+		log.Printf("account store using in-memory demo data")
+	}
 
 	svc := server.New(server.Dependencies{
 		Provider:      provider,
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
-		Accounts:      account.NewMemoryStore(),
+		Accounts:      accountStore,
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)

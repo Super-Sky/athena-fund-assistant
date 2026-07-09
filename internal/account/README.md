@@ -14,5 +14,9 @@ The account module owns the account dashboard store boundary and local MVP read 
   - Describes module boundary and file map.
 - `store.go`
   - Defines the account store interface, local in-memory demo store, holding normalization, total return calculation, recent operation return, and trend generation.
+- `postgres_store.go`
+  - Implements PostgreSQL schema bootstrap, demo seed, persisted account overview reads, manual holding replacement, operation records, and performance trend persistence.
+- `postgres_store_integration_test.go`
+  - Verifies the PostgreSQL store when `ATHENA_FUND_PG_TEST_DSN` is configured.
 - `store_test.go`
   - Verifies account overview provenance, mock markers, manual holding replacement, and allocation recalculation.
