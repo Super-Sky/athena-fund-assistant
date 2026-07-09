@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Super-Sky/athena-fund-assistant/internal/account"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
@@ -32,6 +33,7 @@ func main() {
 		Provider:      provider,
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)

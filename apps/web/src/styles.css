@@ -257,6 +257,107 @@ h2 {
   max-width: 1480px;
 }
 
+.account-dashboard {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  gap: 16px;
+  margin: 0 auto 18px;
+  max-width: 1480px;
+  padding: 18px;
+  background: rgb(255 253 248 / 94%);
+  box-shadow: var(--shadow);
+}
+
+.account-head,
+.account-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.account-flags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.holding-list {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.holding-row {
+  display: grid;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(110px, 0.55fr);
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fffaf0;
+}
+
+.holding-row strong,
+.holding-row span {
+  display: block;
+}
+
+.holding-row span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.positive {
+  color: var(--green);
+}
+
+.negative {
+  color: var(--red);
+}
+
+.trend-strip {
+  display: grid;
+  flex: 0 0 260px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trend-point {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 62px;
+  padding: 10px;
+  background: #fffaf0;
+}
+
+.trend-point span,
+.trend-point strong {
+  display: block;
+}
+
+.trend-point span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.trend-point strong {
+  margin-top: 8px;
+}
+
 .control-panel,
 .metric-board,
 .trace-board,
@@ -614,8 +715,18 @@ textarea:focus {
 
 @media (max-width: 1180px) {
   .workspace,
-  .snapshot-grid {
+  .snapshot-grid,
+  .account-body {
     grid-template-columns: 1fr;
+  }
+
+  .account-body {
+    display: grid;
+  }
+
+  .trend-strip {
+    flex-basis: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .control-panel {
@@ -639,8 +750,19 @@ textarea:focus {
 
   .field-grid,
   .option-grid,
-  .metric-row {
+  .metric-row,
+  .account-metrics,
+  .holding-row,
+  .trend-strip {
     grid-template-columns: 1fr;
+  }
+
+  .account-head {
+    display: grid;
+  }
+
+  .account-flags {
+    justify-content: flex-start;
   }
 
   h1 {

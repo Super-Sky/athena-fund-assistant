@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/Super-Sky/athena-fund-assistant/internal/account"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
@@ -18,6 +20,7 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
 	}).Routes()
 
 	analysis := analysisRequest{
@@ -82,6 +85,7 @@ func TestCORSPreflightForLocalWeb(t *testing.T) {
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
 	}).Routes()
 
 	req := httptest.NewRequest(http.MethodOptions, "/api/analysis/fund", nil)
@@ -94,6 +98,71 @@ func TestCORSPreflightForLocalWeb(t *testing.T) {
 	}
 	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:5173" {
 		t.Fatalf("unexpected allow origin %q", got)
+	}
+}
+
+func TestAccountOverviewAndManualHoldingWorkflow(t *testing.T) {
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
+	}).Routes()
+
+	overviewRR := httptest.NewRecorder()
+	overviewReq := httptest.NewRequest(http.MethodGet, "/api/accounts/demo-user/overview", nil)
+	srv.ServeHTTP(overviewRR, overviewReq)
+	if overviewRR.Code != http.StatusOK {
+		t.Fatalf("overview status=%d body=%s", overviewRR.Code, overviewRR.Body.String())
+	}
+	var overview domain.AccountOverview
+	if err := json.Unmarshal(overviewRR.Body.Bytes(), &overview); err != nil {
+		t.Fatalf("decode overview: %v", err)
+	}
+	if overview.BaseCurrency != "CNY" || len(overview.Holdings) == 0 || len(overview.PerformanceTrend) == 0 {
+		t.Fatalf("unexpected overview = %#v", overview)
+	}
+	if !overview.Trace.MockDataTemporary {
+		t.Fatalf("overview trace = %#v, want mock temporary marker", overview.Trace)
+	}
+
+	now := time.Now().UTC()
+	replaceRR := performJSON(t, srv, http.MethodPost, "/api/accounts/demo-user/holdings", replaceHoldingsRequest{
+		Holdings: []domain.AccountHoldingSnapshot{{
+			InstrumentCode:    "QQQ",
+			InstrumentName:    "Manual Nasdaq 100 ETF",
+			Market:            "US",
+			Currency:          "USD",
+			Units:             10,
+			CostBasis:         400,
+			CurrentPrice:      450,
+			FXToBase:          7.2,
+			DataAuthorization: "manual_entry",
+			Metadata: domain.SourceMetadata{
+				Source:        "server_test",
+				Provider:      "manual",
+				FetchedAt:     now,
+				MarketTime:    now,
+				Timezone:      "America/New_York",
+				Delay:         "0m",
+				LicenseTerms:  "test",
+				Confidence:    0.9,
+				SchemaVersion: "account_snapshot.v1",
+			},
+		}},
+	})
+	if replaceRR.Code != http.StatusOK {
+		t.Fatalf("replace status=%d body=%s", replaceRR.Code, replaceRR.Body.String())
+	}
+	var replaced domain.AccountOverview
+	if err := json.Unmarshal(replaceRR.Body.Bytes(), &replaced); err != nil {
+		t.Fatalf("decode replaced overview: %v", err)
+	}
+	if replaced.TotalMarketValue != 32400 {
+		t.Fatalf("total market value = %.2f, want 32400", replaced.TotalMarketValue)
+	}
+	if replaced.Holdings[0].Metadata.Timezone == "" {
+		t.Fatalf("holding metadata missing timezone: %#v", replaced.Holdings[0].Metadata)
 	}
 }
 

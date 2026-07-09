@@ -6,6 +6,8 @@ This directory contains fund assistant application modules. Business objects liv
 
 - `../cmd/`
   - Runnable process entrypoints.
+- `account/`
+  - Account dashboard store boundary and local demo read model.
 - `data/`
   - Data provider interface plus mock provider implementations for MVP development.
 - `decision/`

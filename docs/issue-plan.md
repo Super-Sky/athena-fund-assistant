@@ -139,6 +139,39 @@ Acceptance:
 - Athena base URL and auth token are configured by environment variables.
 - Startup docs explain the local path.
 
+## Issue 15: Account And Portfolio Performance Dashboard
+
+Turn the product into an account-based assistant rather than a one-off analysis form.
+
+Acceptance:
+
+- User, account, holding snapshot, performance metric, and operation record domain models exist.
+- API can return account overview, performance trend, and recent operation summary.
+- UI homepage shows account performance and holdings.
+- PostgreSQL persistence is added for account, holdings, journal/review links in a follow-up slice.
+- Brokerage sync remains read-only future direction and no order interface is added.
+
+## Issue 16: Agent Conversation Workspace With Skill And File Upload
+
+Build the daily Agent workspace for natural-language requests, skill selection, and attachment upload.
+
+Acceptance:
+
+- UI has conversation workspace, skill selector, upload entry, and trace timeline.
+- Backend has conversation/session/message/attachment metadata API.
+- Attachments are clearly marked pending/unsupported until parsed.
+- Athena remote tools are used for fund business actions.
+
+## Issue 17: User Preference agent.md And Fund Strategy Knowledge Base
+
+Create long-lived preference and strategy assets for account-aware decisions.
+
+Acceptance:
+
+- User preference / agent profile and strategy knowledge item models exist.
+- Knowledge updates are versioned, traceable, governed, and rollbackable.
+- Decision percentages can cite strategy templates, preferences, or data evidence.
+
 ## Athena Dependency Issues
 
 The fund assistant depends on these Athena runtime foundation tasks:

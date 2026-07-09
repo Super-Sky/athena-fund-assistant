@@ -6,5 +6,7 @@ The domain module owns versionable fund assistant business objects and validatio
 
 - `types.go`
   - Defines source metadata, investor profiles, portfolios, fund snapshots, market support snapshots, diagnoses, decision matrices, journal entries, and review tasks.
+- `account.go`
+  - Defines user accounts, account holding snapshots, operation records, performance trend points, and the account overview read model.
 - `types_test.go`
   - Verifies decision matrix governance shape, including rejection of single-path outputs.
