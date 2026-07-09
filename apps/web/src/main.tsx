@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
@@ -129,6 +129,60 @@ type JournalResponse = {
   };
 };
 
+type AccountHoldingSnapshot = {
+  id: string;
+  instrument_code: string;
+  instrument_name: string;
+  market: string;
+  currency: string;
+  units: number;
+  cost_basis: number;
+  current_price: number;
+  fx_to_base: number;
+  base_market_value: number;
+  base_cost_value: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  allocation_pct: number;
+  data_authorization: string;
+  metadata: SourceMetadata;
+};
+
+type AccountPerformancePoint = {
+  date: string;
+  total_market_value: number;
+  total_cost_value: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  operation_pnl: number;
+};
+
+type AccountOverview = {
+  account: {
+    user_id: string;
+    display_name: string;
+    base_currency: string;
+    auth_mode: string;
+  };
+  holdings: AccountHoldingSnapshot[];
+  total_market_value: number;
+  total_cost_value: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  recent_operation_pnl: number;
+  base_currency: string;
+  performance_trend: AccountPerformancePoint[];
+  trace: {
+    provider: string;
+    source: string;
+    market_time: string;
+    timezone: string;
+    mock_data_temporary: boolean;
+    read_only_sync_available: boolean;
+    warnings: string[] | null;
+  };
+};
+
 type InstrumentPreset = {
   code: string;
   name: string;
@@ -205,7 +259,9 @@ function App() {
   const [selectedOptionID, setSelectedOptionID] = useState("option_balanced");
   const [notes, setNotes] = useState("按本轮策略执行前，先确认数据源仍为 mock；真实资金操作需自行复核。");
   const [journal, setJournal] = useState<JournalResponse | null>(null);
+  const [accountOverview, setAccountOverview] = useState<AccountOverview | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [loadingAccount, setLoadingAccount] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,6 +269,30 @@ function App() {
     () => analysis?.decision_matrix.options.find((option) => option.id === selectedOptionID) ?? null,
     [analysis, selectedOptionID]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingAccount(true);
+    fetchJSON<AccountOverview>("/api/accounts/demo-user/overview", { method: "GET" })
+      .then((response) => {
+        if (!cancelled) {
+          setAccountOverview(response);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingAccount(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function applyPreset(code: string) {
     const preset = presets.find((item) => item.code === code) ?? presets[0];
@@ -285,6 +365,8 @@ function App() {
           <StatusPill icon="check" label="无自动交易" tone="blue" />
         </div>
       </header>
+
+      <AccountDashboard overview={accountOverview} loading={loadingAccount} />
 
       <section className="workspace">
         <form className="control-panel" onSubmit={runAnalysis}>
@@ -425,6 +507,86 @@ function App() {
         </section>
       </section>
     </main>
+  );
+}
+
+function AccountDashboard({ loading, overview }: { loading: boolean; overview: AccountOverview | null }) {
+  if (loading && !overview) {
+    return (
+      <section className="account-dashboard">
+        <PanelTitle icon="wallet" title="账户收益" caption="正在读取本地账户快照" />
+      </section>
+    );
+  }
+  if (!overview) {
+    return null;
+  }
+  const lastPoint = overview.performance_trend[overview.performance_trend.length - 1];
+  return (
+    <section className="account-dashboard">
+      <div className="account-head">
+        <PanelTitle
+          icon="wallet"
+          title={`账户收益 · ${overview.account.display_name} · ${overview.base_currency}`}
+          caption="账户总收益、近期操作收益与持仓结构"
+        />
+        <div className="account-flags">
+          <span className="tag evidence">{overview.trace.provider}</span>
+          <span className="tag warning">{overview.trace.mock_data_temporary ? "mock temporary" : "live data"}</span>
+          <span className="tag evidence">
+            {overview.trace.read_only_sync_available ? "read-only sync ready" : "manual entry"}
+          </span>
+        </div>
+      </div>
+
+      <div className="account-metrics">
+        <Metric label="总市值" value={formatCurrency(overview.total_market_value, overview.base_currency)} />
+        <Metric
+          label="总收益"
+          tone={overview.total_pnl >= 0 ? "up" : "down"}
+          value={`${formatCurrency(overview.total_pnl, overview.base_currency)} · ${signedPct(overview.total_pnl_pct)}`}
+        />
+        <Metric
+          label="近期操作收益"
+          tone={overview.recent_operation_pnl >= 0 ? "up" : "down"}
+          value={formatCurrency(overview.recent_operation_pnl, overview.base_currency)}
+        />
+        <Metric label="最近趋势" value={lastPoint ? signedPct(lastPoint.total_pnl_pct) : "-"} />
+      </div>
+
+      <div className="account-body">
+        <div className="holding-list">
+          {overview.holdings.map((holding) => (
+            <div className="holding-row" key={holding.id}>
+              <div>
+                <strong>{holding.instrument_code}</strong>
+                <span>{holding.instrument_name}</span>
+              </div>
+              <div>
+                <strong>{formatCurrency(holding.base_market_value, overview.base_currency)}</strong>
+                <span>
+                  {holding.market} · {holding.currency} · {formatPct(holding.allocation_pct)}
+                </span>
+              </div>
+              <div>
+                <strong className={holding.unrealized_pnl >= 0 ? "positive" : "negative"}>
+                  {signedPct(holding.unrealized_pnl_pct)}
+                </strong>
+                <span>{holding.data_authorization}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="trend-strip" aria-label="account performance trend">
+          {overview.performance_trend.map((point) => (
+            <div className="trend-point" key={point.date}>
+              <span>{point.date.slice(5)}</span>
+              <strong className={point.total_pnl >= 0 ? "positive" : "negative"}>{signedPct(point.total_pnl_pct)}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -658,6 +820,14 @@ function styleLabel(style: string) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatCurrency(value: number, currency: string) {
+  return new Intl.NumberFormat("zh-CN", {
+    currency,
+    maximumFractionDigits: 2,
+    style: "currency"
+  }).format(value);
 }
 
 function formatPct(value: number) {

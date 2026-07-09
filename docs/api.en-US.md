@@ -27,6 +27,65 @@ Response example:
 }
 ```
 
+## `GET /api/accounts/{user_id}/overview`
+
+Reads the user's account performance dashboard.
+
+Current local demo user:
+
+- `demo-user`
+
+Response fields:
+
+- `account`: local user account identity, display name, base currency, and auth mode.
+- `holdings`: account holding snapshots with market, currency, units, cost, current price, `fx_to_base`, base-currency market value, unrealized return, allocation, and `data_authorization`.
+- `total_market_value`
+- `total_cost_value`
+- `total_pnl`
+- `total_pnl_pct`
+- `recent_operation_pnl`
+- `performance_trend`
+- `recent_operations`
+- `trace`
+
+The current `trace` includes:
+
+- `provider`
+- `source`
+- `fetched_at`
+- `market_time`
+- `timezone`
+- `license_terms`
+- `confidence`
+- `schema_version`
+- `mock_data_temporary`
+- `read_only_sync_available`
+- `warnings`
+
+Without `DATABASE_URL`, local runs use the in-memory demo store. Docker / `DATABASE_URL` environments use the PostgreSQL store. Current market and return inputs are still demo/mock data and must not be represented as a real brokerage account or real return record.
+
+## `POST /api/accounts/{user_id}/holdings`
+
+Replaces the user's manually entered account holdings and recalculates the account overview.
+
+Request fields:
+
+- `holdings`: `AccountHoldingSnapshot[]`
+
+Each holding must include:
+
+- `instrument_code`
+- `market`
+- `currency`
+- `units`
+- `cost_basis`
+- `current_price`
+- `fx_to_base`
+- `data_authorization`
+- `metadata`
+
+This endpoint only records manual data and local calculations. It does not trade, place brokerage orders, or connect to a brokerage order interface.
+
 ## `POST /api/analysis/fund`
 
 Generates fund diagnosis and a three-option decision matrix from the investor profile, portfolio, and target instrument code.
@@ -82,6 +141,7 @@ Response fields:
 ## Current Boundaries
 
 - The journal store is in-memory and is lost on service restart.
+- The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- PostgreSQL, Redis, Athena agent-run integration, and real providers are later implementation items.
+- Redis, Athena agent-run integration, persistent journal/review account links, and real providers are later implementation items.

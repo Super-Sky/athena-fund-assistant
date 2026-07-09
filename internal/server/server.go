@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Super-Sky/athena-fund-assistant/internal/account"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
@@ -17,6 +18,7 @@ type Dependencies struct {
 	Provider      data.Provider
 	DecisionMaker *decision.Engine
 	Journals      *journal.MemoryStore
+	Accounts      account.Store
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -36,6 +38,8 @@ func New(deps Dependencies) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /api/accounts/{user_id}/overview", s.handleAccountOverview)
+	mux.HandleFunc("POST /api/accounts/{user_id}/holdings", s.handleReplaceAccountHoldings)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
 	return withCORS(withJSON(mux))
@@ -66,8 +70,43 @@ type journalResponse struct {
 	Review  domain.ReviewTask   `json:"review"`
 }
 
+type replaceHoldingsRequest struct {
+	Holdings []domain.AccountHoldingSnapshot `json:"holdings"`
+}
+
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleAccountOverview(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Accounts == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("account store is not configured"))
+		return
+	}
+	overview, err := s.deps.Accounts.Overview(r.Context(), strings.TrimSpace(r.PathValue("user_id")))
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, overview)
+}
+
+func (s *Server) handleReplaceAccountHoldings(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Accounts == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("account store is not configured"))
+		return
+	}
+	var req replaceHoldingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	overview, err := s.deps.Accounts.ReplaceHoldings(r.Context(), strings.TrimSpace(r.PathValue("user_id")), req.Holdings)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, overview)
 }
 
 func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {

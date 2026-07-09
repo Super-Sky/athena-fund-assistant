@@ -27,6 +27,65 @@
 }
 ```
 
+## `GET /api/accounts/{user_id}/overview`
+
+读取用户账户收益看板。
+
+当前本地 demo 用户：
+
+- `demo-user`
+
+响应字段：
+
+- `account`：本地用户账户身份、展示名、本位币和认证模式。
+- `holdings`：账户持仓快照，包含市场、币种、份额、成本、现价、`fx_to_base`、本位币市值、未实现收益、占比和 `data_authorization`。
+- `total_market_value`
+- `total_cost_value`
+- `total_pnl`
+- `total_pnl_pct`
+- `recent_operation_pnl`
+- `performance_trend`
+- `recent_operations`
+- `trace`
+
+`trace` 当前包含：
+
+- `provider`
+- `source`
+- `fetched_at`
+- `market_time`
+- `timezone`
+- `license_terms`
+- `confidence`
+- `schema_version`
+- `mock_data_temporary`
+- `read_only_sync_available`
+- `warnings`
+
+本地未设置 `DATABASE_URL` 时使用内存 demo store；Docker / `DATABASE_URL` 环境会使用 PostgreSQL store。当前行情和收益输入仍为 demo/mock 数据，不能冒充真实券商账户或真实收益。
+
+## `POST /api/accounts/{user_id}/holdings`
+
+替换用户手动录入的账户持仓，并重新计算账户概览。
+
+请求字段：
+
+- `holdings`：`AccountHoldingSnapshot[]`
+
+每条持仓必须包含：
+
+- `instrument_code`
+- `market`
+- `currency`
+- `units`
+- `cost_basis`
+- `current_price`
+- `fx_to_base`
+- `data_authorization`
+- `metadata`
+
+当前接口只表示手动记录和本地计算，不执行交易，不连接券商下单。
+
 ## `POST /api/analysis/fund`
 
 根据用户画像、持仓和标的代码生成基金体检与三档决策矩阵。
@@ -82,6 +141,7 @@
 ## 当前边界
 
 - 当前 journal 使用内存存储，服务重启后会丢失。
+- 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- PostgreSQL、Redis、Athena agent run 对接和真实 provider 是后续实现项。
+- Redis、Athena agent run 对接、journal/review 持久化关联和真实 provider 是后续实现项。

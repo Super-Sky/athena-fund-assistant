@@ -15,6 +15,7 @@ Athena
   control-plane
 
 athena-fund-assistant
+  user account and account dashboard
   investor profile
   portfolio and holding domain
   fund data adapters
@@ -37,7 +38,10 @@ cmd/providerprobe
   validation-first real data-source probe command
 
 internal/domain
-  InvestorProfile, Portfolio, FundInstrument, DecisionMatrix, DecisionJournal
+  UserAccount, AccountOverview, InvestorProfile, Portfolio, FundInstrument, DecisionMatrix, DecisionJournal
+
+internal/account
+  account dashboard store interface and local demo account read model
 
 internal/data
   provider interface, validation report, mock fund and market data
@@ -58,6 +62,11 @@ internal/server
 ## Domain Objects
 
 - `InvestorProfile`
+- `UserAccount`
+- `AccountHoldingSnapshot`
+- `AccountOperationRecord`
+- `AccountPerformancePoint`
+- `AccountOverview`
 - `Portfolio`
 - `PortfolioHolding`
 - `FundInstrument`

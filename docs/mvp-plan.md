@@ -6,7 +6,26 @@ Build a local-first fund research assistant that can guide a user from profile a
 
 ## MVP Workflows
 
-### 1. Investor Profile
+### 1. Account Dashboard
+
+Capture:
+
+- local user account
+- manually entered holdings
+- base currency
+- recent operation notes
+- source and freshness metadata
+
+Output:
+
+- total market value
+- total PnL and PnL percentage
+- recent operation PnL
+- performance trend
+- holding structure
+- account trace
+
+### 2. Investor Profile
 
 Capture:
 
@@ -23,7 +42,7 @@ Output:
 - default option weights
 - decision-output preference
 
-### 2. Portfolio Import
+### 3. Portfolio Import
 
 Capture:
 
@@ -39,7 +58,7 @@ Output:
 - concentration warnings
 - missing-data warnings
 
-### 3. Fund Diagnosis
+### 4. Fund Diagnosis
 
 Input:
 
@@ -55,7 +74,7 @@ Output:
 - data freshness
 - evidence list
 
-### 4. Decision Matrix
+### 5. Decision Matrix
 
 Output:
 
@@ -65,7 +84,7 @@ Output:
 - fallback option when the user profile is strongly biased
 - option comparison table
 
-### 5. Decision Journal
+### 6. Decision Journal
 
 Record:
 
@@ -76,7 +95,7 @@ Record:
 - invalidation condition
 - review date
 
-### 6. Review Task
+### 7. Review Task
 
 Compare:
 
@@ -88,9 +107,10 @@ Compare:
 ## MVP Acceptance Criteria
 
 - A user can enter one profile and one fund holding.
+- A user can open a local account dashboard with holdings, total return, recent operation return, and trend.
 - The system can generate a three-option decision matrix from mock data.
 - The user can select an option and create a decision journal entry.
 - A review task can be generated from the journal.
 - The output includes source/freshness metadata even when the first data provider is mock.
 - The architecture can swap mock data for real providers without changing domain objects.
-
+- The account dashboard keeps source/freshness metadata and marks mock account data as temporary.
