@@ -48,6 +48,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 中国基金/ETF 与美股股票/ETF/指数/汇率/交易日历真实数据源中文方案。
 - `data-source-strategy.en-US.md`
   - English real-data strategy for China funds/ETFs and US equities/ETFs/indices/FX/market calendars.
+- `data-source-validation-snapshot.zh-CN.md`
+  - 真实数据源本轮验证结果、provider 准入结论和下一步 provider 决策中文快照。
+- `data-source-validation-snapshot.en-US.md`
+  - English snapshot of real-data validation results, provider admission decisions, and next provider steps.
 - `athena-mvp-gap.zh-CN.md`
   - Athena 底座为 fund assistant MVP 需要补齐的中文缺口清单。
 - `athena-mvp-gap.en-US.md`

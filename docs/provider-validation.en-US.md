@@ -63,6 +63,11 @@ TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
 
 The command emits a JSON report. It exits non-zero when any required probe fails.
 
+Current validation snapshots:
+
+- `docs/data-source-validation-snapshot.zh-CN.md`
+- `docs/data-source-validation-snapshot.en-US.md`
+
 ## Acceptance Criteria
 
 - Provider validation report must have `passed=true`.

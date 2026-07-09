@@ -26,6 +26,13 @@ func ProbeTushare(ctx context.Context, cfg TushareConfig) Report {
 		cfg.BaseURL = "http://api.tushare.pro"
 	}
 	report := NewReport("tushare", "tushare_user_token_required")
+	report.Coverage = []string{"china_public_fund_basic", "china_public_fund_nav", "china_index_daily"}
+	report.CredentialRequired = true
+	report.FailurePolicy = "fall back to mock_or_csv and mark data temporary when token, permission points, quota, or schema validation fails"
+	report.ValidationNotes = []string{
+		"user-supplied token is required before any live China fund provider can be enabled",
+		"endpoint permissions and commercial display boundaries must be confirmed per Tushare API",
+	}
 	if cfg.Token == "" {
 		report.Add(Check{Name: "token", Endpoint: cfg.BaseURL, Passed: false, Message: "TUSHARE_TOKEN is required for live validation"})
 		return report
