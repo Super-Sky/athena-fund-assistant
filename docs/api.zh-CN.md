@@ -86,6 +86,128 @@
 
 当前接口只表示手动记录和本地计算，不执行交易，不连接券商下单。
 
+## `GET /api/conversations/skills`
+
+返回 Agent 工作台可选 skill。
+
+响应字段：
+
+- `items`：skill 列表，每个 skill 包含 `id`、`name`、`description`、`tool_names` 和 `enabled`。
+
+当前内置 skill：
+
+- `fund_research`
+- `portfolio_review`
+- `document_intake`
+
+## `POST /api/conversations`
+
+创建一条对话 session。
+
+请求字段：
+
+- `user_id`
+- `skill_id`
+- `title`
+
+响应为 `ConversationDetail`，包含 `session`、`messages`、`attachments` 和 `trace`。
+
+## `GET /api/conversations/{conversation_id}`
+
+读取对话详情、消息、附件 metadata 和 trace timeline。
+
+## `POST /api/conversations/{conversation_id}/attachments`
+
+上传文件并返回附件 metadata。
+
+请求类型：`multipart/form-data`
+
+字段：
+
+- `file`
+- `user_id`
+
+上传边界：
+
+- 单文件最大 `10 MiB`。
+- 默认保留期 `7 天`。
+- `ATHENA_FUND_UPLOAD_DIR` 可配置上传目录；未设置时使用系统临时目录。
+- 当前只生成 metadata、SHA256、`pending_parse` / `unsupported` 状态，不解析附件内容。
+- 未解析附件不能作为已确认事实、账单或策略知识。
+
+## `POST /api/conversations/{conversation_id}/messages`
+
+追加一条工作台消息。
+
+请求字段：
+
+- `role`
+- `content`
+- `skill_id`
+- `attachment_ids`
+
+响应返回更新后的 `ConversationDetail`。当前会写入本地 trace；真实 Athena agent run 仍是 pending contract，不在本 slice 中调用 Athena。
+
+## `GET /internal/tools/catalog`
+
+返回 fund assistant 暴露给 Athena remote tool registry 的工具注册建议。
+
+查询参数：
+
+- `base_url`：可选。传入后会生成完整 `endpoint`，例如 `http://127.0.0.1:8081/internal/tools/execute`；不传时返回相对路径 `/internal/tools/execute`。
+
+响应字段：
+
+- `contract_version`：当前为 `remote_tool_execution.v1`。
+- `app_id`：当前为 `athena-fund-assistant`。
+- `items`：可注册到 Athena 的 remote tool 列表。
+
+当前只读工具：
+
+- `account_overview`：读取用户账户概览、持仓、近期操作和收益趋势。
+- `fund_market_snapshot`：读取基金 / ETF 快照，并保留 source、provider、fetched_at、market_time、timezone、delay、license、confidence 和 schema_version。
+
+所有当前工具均为 `side_effect_level=none`，不执行交易、不连接券商下单、不移动资金。
+
+## `POST /internal/tools/execute`
+
+执行 Athena `remote_tool_execution.v1` callback。该接口面向 Athena remote adapter，不是前端用户 API。
+
+请求字段：
+
+- `contract_version`
+- `request_id`
+- `tool_call_id`
+- `registration_id`
+- `app_id`
+- `tool_name`
+- `arguments`
+- `attempt`
+- `metadata`
+
+成功响应会回传相同 `request_id` 和 `tool_call_id`，并返回：
+
+- `status=ok`
+- `content`：JSON 字符串。
+
+错误响应使用同一 envelope，包含：
+
+- `status=error`
+- `error.code`
+- `error.message`
+- `error.retryable`
+
+支持参数：
+
+- `account_overview`：`{"user_id":"demo-user"}`；`user_id` 缺省时使用 `demo-user`。
+- `fund_market_snapshot`：`{"instrument_code":"QQQ"}`；`instrument_code` 必填。
+
+边界：
+
+- 该接口只暴露 fund assistant 的业务工具实现，不导入 Athena 内部 Go 包。
+- 返回内容仍需按 metadata 判断真实 / mock 数据来源。
+- 未知工具例如下单类 `place_order` 会返回 `unknown_tool`，不会执行任何资金动作。
+
 ## `POST /api/analysis/fund`
 
 根据用户画像、持仓和标的代码生成基金体检与三档决策矩阵。
@@ -144,4 +266,4 @@
 - 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- Redis、Athena agent run 对接、journal/review 持久化关联和真实 provider 是后续实现项。
+- Redis、Athena agent run 对接、附件解析/OCR/PDF/CSV parser、journal/review 持久化关联和真实 provider 是后续实现项。

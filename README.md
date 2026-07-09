@@ -54,6 +54,7 @@ This repository now contains the first local Go API slice for the fund assistant
 - fund analysis endpoint
 - React + TypeScript + Vite research console
 - local account performance dashboard
+- Agent conversation workspace with skill selection and attachment metadata
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
 - in-memory decision journal and review task

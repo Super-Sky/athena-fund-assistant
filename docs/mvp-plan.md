@@ -42,7 +42,24 @@ Output:
 - default option weights
 - decision-output preference
 
-### 3. Portfolio Import
+### 3. Agent Conversation Workspace
+
+Capture:
+
+- selected skill / workflow
+- user message
+- uploaded image or file metadata
+- attachment parse status
+
+Output:
+
+- conversation session
+- message timeline
+- attachment metadata and retention window
+- local trace events
+- pending Athena run / tool-call status
+
+### 4. Portfolio Import
 
 Capture:
 
@@ -58,7 +75,7 @@ Output:
 - concentration warnings
 - missing-data warnings
 
-### 4. Fund Diagnosis
+### 5. Fund Diagnosis
 
 Input:
 
@@ -74,7 +91,7 @@ Output:
 - data freshness
 - evidence list
 
-### 5. Decision Matrix
+### 6. Decision Matrix
 
 Output:
 
@@ -84,7 +101,7 @@ Output:
 - fallback option when the user profile is strongly biased
 - option comparison table
 
-### 6. Decision Journal
+### 7. Decision Journal
 
 Record:
 
@@ -95,7 +112,7 @@ Record:
 - invalidation condition
 - review date
 
-### 7. Review Task
+### 8. Review Task
 
 Compare:
 
@@ -108,9 +125,11 @@ Compare:
 
 - A user can enter one profile and one fund holding.
 - A user can open a local account dashboard with holdings, total return, recent operation return, and trend.
+- A user can open an Agent workspace, select a skill, upload a file, send a message, and see attachment/trace status.
 - The system can generate a three-option decision matrix from mock data.
 - The user can select an option and create a decision journal entry.
 - A review task can be generated from the journal.
 - The output includes source/freshness metadata even when the first data provider is mock.
 - The architecture can swap mock data for real providers without changing domain objects.
 - The account dashboard keeps source/freshness metadata and marks mock account data as temporary.
+- Uploaded files stay pending/unsupported until a parser tool processes them.

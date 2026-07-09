@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
@@ -19,6 +21,7 @@ type Dependencies struct {
 	DecisionMaker *decision.Engine
 	Journals      *journal.MemoryStore
 	Accounts      account.Store
+	Conversations conversation.Store
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -40,8 +43,15 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /api/accounts/{user_id}/overview", s.handleAccountOverview)
 	mux.HandleFunc("POST /api/accounts/{user_id}/holdings", s.handleReplaceAccountHoldings)
+	mux.HandleFunc("GET /api/conversations/skills", s.handleConversationSkills)
+	mux.HandleFunc("POST /api/conversations", s.handleCreateConversation)
+	mux.HandleFunc("GET /api/conversations/{conversation_id}", s.handleConversationDetail)
+	mux.HandleFunc("POST /api/conversations/{conversation_id}/messages", s.handleAddConversationMessage)
+	mux.HandleFunc("POST /api/conversations/{conversation_id}/attachments", s.handleUploadConversationAttachment)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
+	mux.HandleFunc("GET /internal/tools/catalog", s.handleRemoteToolCatalog)
+	mux.HandleFunc("POST /internal/tools/execute", s.handleRemoteToolExecution)
 	return withCORS(withJSON(mux))
 }
 
@@ -72,6 +82,19 @@ type journalResponse struct {
 
 type replaceHoldingsRequest struct {
 	Holdings []domain.AccountHoldingSnapshot `json:"holdings"`
+}
+
+type createConversationRequest struct {
+	UserID  string `json:"user_id"`
+	SkillID string `json:"skill_id"`
+	Title   string `json:"title"`
+}
+
+type addConversationMessageRequest struct {
+	Role          string   `json:"role"`
+	Content       string   `json:"content"`
+	SkillID       string   `json:"skill_id"`
+	AttachmentIDs []string `json:"attachment_ids"`
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +130,101 @@ func (s *Server) handleReplaceAccountHoldings(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, http.StatusOK, overview)
+}
+
+func (s *Server) handleConversationSkills(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Conversations == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": s.deps.Conversations.Skills(r.Context())})
+}
+
+func (s *Server) handleCreateConversation(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Conversations == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
+		return
+	}
+	var req createConversationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	detail, err := s.deps.Conversations.Create(r.Context(), conversation.CreateInput{
+		UserID:  strings.TrimSpace(req.UserID),
+		SkillID: strings.TrimSpace(req.SkillID),
+		Title:   strings.TrimSpace(req.Title),
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, detail)
+}
+
+func (s *Server) handleConversationDetail(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Conversations == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
+		return
+	}
+	detail, err := s.deps.Conversations.Detail(r.Context(), strings.TrimSpace(r.PathValue("conversation_id")))
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
+}
+
+func (s *Server) handleAddConversationMessage(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Conversations == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
+		return
+	}
+	var req addConversationMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	detail, err := s.deps.Conversations.AddMessage(r.Context(), strings.TrimSpace(r.PathValue("conversation_id")), conversation.MessageInput{
+		Role:          strings.TrimSpace(req.Role),
+		Content:       strings.TrimSpace(req.Content),
+		SkillID:       strings.TrimSpace(req.SkillID),
+		AttachmentIDs: compactStrings(req.AttachmentIDs),
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
+}
+
+func (s *Server) handleUploadConversationAttachment(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Conversations == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
+		return
+	}
+	if err := r.ParseMultipartForm(12 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	defer file.Close()
+	attachment, err := s.deps.Conversations.SaveAttachment(r.Context(), strings.TrimSpace(r.PathValue("conversation_id")), conversation.AttachmentInput{
+		UserID:      strings.TrimSpace(r.FormValue("user_id")),
+		FileName:    header.Filename,
+		ContentType: attachmentContentType(header),
+		SizeBytes:   header.Size,
+		Reader:      file,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, attachment)
 }
 
 func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
@@ -197,4 +315,25 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 
 func writeError(w http.ResponseWriter, status int, err error) {
 	writeJSON(w, status, map[string]string{"error": err.Error()})
+}
+
+func attachmentContentType(header *multipart.FileHeader) string {
+	if header == nil {
+		return ""
+	}
+	if values := header.Header.Values("Content-Type"); len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
+func compactStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
 }

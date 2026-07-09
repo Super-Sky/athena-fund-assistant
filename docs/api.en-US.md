@@ -86,6 +86,128 @@ Each holding must include:
 
 This endpoint only records manual data and local calculations. It does not trade, place brokerage orders, or connect to a brokerage order interface.
 
+## `GET /api/conversations/skills`
+
+Returns selectable Agent workspace skills.
+
+Response fields:
+
+- `items`: skill list. Each skill includes `id`, `name`, `description`, `tool_names`, and `enabled`.
+
+Current built-in skills:
+
+- `fund_research`
+- `portfolio_review`
+- `document_intake`
+
+## `POST /api/conversations`
+
+Creates a conversation session.
+
+Request fields:
+
+- `user_id`
+- `skill_id`
+- `title`
+
+The response is `ConversationDetail` with `session`, `messages`, `attachments`, and `trace`.
+
+## `GET /api/conversations/{conversation_id}`
+
+Reads conversation detail, messages, attachment metadata, and trace timeline.
+
+## `POST /api/conversations/{conversation_id}/attachments`
+
+Uploads a file and returns attachment metadata.
+
+Request type: `multipart/form-data`
+
+Fields:
+
+- `file`
+- `user_id`
+
+Upload boundaries:
+
+- Per-file limit is `10 MiB`.
+- Default retention window is `7 days`.
+- `ATHENA_FUND_UPLOAD_DIR` configures the upload directory; if unset, the system temp directory is used.
+- The current slice only generates metadata, SHA256, and `pending_parse` / `unsupported` status. It does not parse attachment content.
+- Unparsed attachments must not be treated as confirmed facts, statements, or strategy knowledge.
+
+## `POST /api/conversations/{conversation_id}/messages`
+
+Appends one workspace message.
+
+Request fields:
+
+- `role`
+- `content`
+- `skill_id`
+- `attachment_ids`
+
+The response returns the updated `ConversationDetail`. The current slice writes local trace events; the real Athena agent run is still a pending contract and is not called in this slice.
+
+## `GET /internal/tools/catalog`
+
+Returns suggested tool registrations exposed by the fund assistant for Athena's remote tool registry.
+
+Query parameters:
+
+- `base_url`: optional. When set, the response generates a full `endpoint`, for example `http://127.0.0.1:8081/internal/tools/execute`; when omitted, the response returns the relative path `/internal/tools/execute`.
+
+Response fields:
+
+- `contract_version`: currently `remote_tool_execution.v1`.
+- `app_id`: currently `athena-fund-assistant`.
+- `items`: remote tools that can be registered in Athena.
+
+Current read-only tools:
+
+- `account_overview`: reads the user's account overview, holdings, recent operations, and performance trend.
+- `fund_market_snapshot`: reads a fund / ETF snapshot while preserving source, provider, fetched_at, market_time, timezone, delay, license, confidence, and schema_version.
+
+All current tools use `side_effect_level=none`. They do not trade, connect to brokerage order placement, or move money.
+
+## `POST /internal/tools/execute`
+
+Executes Athena `remote_tool_execution.v1` callbacks. This endpoint is for the Athena remote adapter, not for direct frontend user calls.
+
+Request fields:
+
+- `contract_version`
+- `request_id`
+- `tool_call_id`
+- `registration_id`
+- `app_id`
+- `tool_name`
+- `arguments`
+- `attempt`
+- `metadata`
+
+A successful response returns the same `request_id` and `tool_call_id` plus:
+
+- `status=ok`
+- `content`: JSON string.
+
+Error responses use the same envelope and include:
+
+- `status=error`
+- `error.code`
+- `error.message`
+- `error.retryable`
+
+Supported arguments:
+
+- `account_overview`: `{"user_id":"demo-user"}`; `user_id` defaults to `demo-user` when omitted.
+- `fund_market_snapshot`: `{"instrument_code":"QQQ"}`; `instrument_code` is required.
+
+Boundaries:
+
+- This endpoint exposes fund-assistant business tool implementations only and does not import Athena internal Go packages.
+- Returned content still must be interpreted through its metadata to distinguish real and mock data.
+- Unknown tools such as order-placement `place_order` return `unknown_tool` and never execute a money-moving action.
+
 ## `POST /api/analysis/fund`
 
 Generates fund diagnosis and a three-option decision matrix from the investor profile, portfolio, and target instrument code.
@@ -144,4 +266,4 @@ Response fields:
 - The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- Redis, Athena agent-run integration, persistent journal/review account links, and real providers are later implementation items.
+- Redis, Athena agent-run integration, attachment parsers/OCR/PDF/CSV parsing, persistent journal/review account links, and real providers are later implementation items.

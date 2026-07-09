@@ -31,6 +31,12 @@ Account dashboard check:
 curl http://127.0.0.1:8081/api/accounts/demo-user/overview
 ```
 
+Agent workspace skill check:
+
+```bash
+curl http://127.0.0.1:8081/api/conversations/skills
+```
+
 PostgreSQL store integration test:
 
 ```bash
@@ -65,5 +71,6 @@ Default ports:
 ## Current Boundaries
 
 - The API container reads `DATABASE_URL` for account dashboard persistence. `REDIS_URL` remains reserved for later caching and async work.
+- The API reads `ATHENA_FUND_UPLOAD_DIR` as the attachment upload directory. If unset, the system temp directory is used.
 - Mock data must continue to be marked as temporary in UI / trace output.
 - The current web app only calls the fund assistant API; dual-service Athena integration will be completed after Athena API wiring.
