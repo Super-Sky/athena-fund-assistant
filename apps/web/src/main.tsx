@@ -5,6 +5,8 @@ import "./styles.css";
 type RiskPreference = "conservative" | "balanced" | "aggressive";
 type IconName = "activity" | "alert" | "bar" | "check" | "database" | "note" | "play" | "shield" | "wallet";
 
+const acceptedAttachmentTypes = "image/*,.pdf,.csv,.txt,text/plain,text/csv,application/pdf,application/vnd.ms-excel";
+
 type InvestorProfile = {
   risk_preference: RiskPreference;
   investment_horizon_months: number;
@@ -802,8 +804,9 @@ function AgentWorkspace({
           </label>
           <label className="upload-button">
             <Icon name="database" />
-            {uploading ? "上传中" : "上传图片/文件"}
+            {!conversation ? "初始化中" : uploading ? "上传中" : "上传图片/文件"}
             <input
+              accept={acceptedAttachmentTypes}
               disabled={!conversation || uploading}
               onChange={(event) => {
                 onUpload(event.target.files?.[0] ?? null);
