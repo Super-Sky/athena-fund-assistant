@@ -12,6 +12,8 @@ This API belongs to the fund assistant business application layer, not Athena co
 - Override with `ATHENA_FUND_API_ADDR`.
 - Requests and responses are JSON.
 - The API allows local web-development origins; current CORS support covers port-qualified `localhost` / `127.0.0.1` origins.
+- When `ATHENA_BASE_URL` is unset, the service uses a local mock Athena client; when configured, it calls external Athena through `POST /api/agent/runs`.
+- `ATHENA_AUTH_TOKEN` is optional and is sent to Athena as a Bearer token.
 - Mock data must surface `mock_data_temporary=true` in trace output.
 - Financial output must include multiple options, evidence, risks, invalidation conditions, and review timing.
 
@@ -146,7 +148,15 @@ Request fields:
 - `skill_id`
 - `attachment_ids`
 
-The response returns the updated `ConversationDetail`. The current slice writes local trace events; the real Athena agent run is still a pending contract and is not called in this slice.
+The response returns the updated `ConversationDetail`. The service saves the message, starts one generic Agent Run through the Athena client, and writes run status, run_id, trace_available, and stop_reason back to the conversation trace. When `ATHENA_BASE_URL` is unset, this call is handled by the mock client for local demos.
+
+The Agent Run request maps business semantics into generic Athena input:
+
+- `goal`: the user message.
+- `context_assets`: conversation ID, skill ID, and attachment IDs; attachments remain metadata-only.
+- `tools` / `enabled_tools`: OpenAI-compatible function tools, currently `account_overview` and `fund_market_snapshot`.
+- `governance_refs`: no automatic trading, no guaranteed-return claims, and data-source metadata required.
+- `constraints`: no automatic trading, no brokerage order placement, risk and invalidation required, and no single absolute path conclusion.
 
 ## `GET /internal/tools/catalog`
 

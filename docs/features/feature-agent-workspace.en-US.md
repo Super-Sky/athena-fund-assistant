@@ -19,7 +19,7 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - `POST /api/conversations/{conversation_id}/attachments`
   - Uploads a file and returns metadata. The current slice does not parse the attachment and does not treat it as fact.
 - `POST /api/conversations/{conversation_id}/messages`
-  - Appends a message and writes local trace events. Athena agent run is currently marked as `pending` until the real Athena client is wired.
+  - Appends a message, writes local trace events, and starts an Agent Run through the Athena client. When `ATHENA_BASE_URL` is unset, the mock client keeps local demos runnable; when configured, the app calls external Athena `/api/agent/runs`.
 - `GET /internal/tools/catalog`
   - Emits fund-assistant tool registrations that can be registered in Athena's remote tool registry.
 - `POST /internal/tools/execute`
@@ -37,9 +37,9 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 
 ## Athena Boundary
 
-- The UI and API now expose the local contract shape for starting an Agent run, but this slice does not call the Athena Agent Run API yet.
+- The UI and API now expose the contract shape for starting an Agent run, and the app-side Athena client writes run trace back to the conversation.
 - The fund assistant now exposes Athena remote tool callbacks; Athena can register the read-only business tools in its remote registry and call back into this app.
-- `athena_agent_run=pending` in trace means the next slice should start a real Athena Agent Run and write remote tool results back to the conversation trace.
+- Without `ATHENA_BASE_URL`, trace shows a mock run; with external Athena configured, trace records the real Athena run_id, status, and trace_available.
 - Fund business objects, uploaded files, and business tool implementations stay in the fund assistant and are not written into Athena core.
 - Current remote tools are read-only, use `side_effect_level=none`, and do not perform automatic trading or money movement.
 
@@ -49,3 +49,4 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - `yarn build` in `apps/web`
 - Browser smoke: workspace, skill selector, upload entry, and trace timeline are visible.
 - Server test: remote tool catalog, `account_overview`, `fund_market_snapshot`, and the unknown-tool error envelope.
+- Server test: conversation message starts an Athena mock run and writes an `athena_agent_run=ok` trace.

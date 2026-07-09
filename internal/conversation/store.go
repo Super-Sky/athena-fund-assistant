@@ -32,6 +32,7 @@ type Store interface {
 	Detail(context.Context, string) (domain.ConversationDetail, error)
 	AddMessage(context.Context, string, MessageInput) (domain.ConversationDetail, error)
 	SaveAttachment(context.Context, string, AttachmentInput) (domain.ConversationAttachment, error)
+	RecordTrace(context.Context, string, TraceInput) (domain.ConversationDetail, error)
 }
 
 // CreateInput describes a new conversation request.
@@ -59,6 +60,15 @@ type AttachmentInput struct {
 	ContentType string
 	SizeBytes   int64
 	Reader      io.Reader
+}
+
+// TraceInput carries one safe timeline event from application integrations.
+// TraceInput 携带一条来自应用集成的安全时间线事件。
+type TraceInput struct {
+	Kind     string
+	Status   string
+	Summary  string
+	Metadata map[string]string
 }
 
 // MemoryStore stores conversation workspace state for local MVP runs.
@@ -276,6 +286,27 @@ func (s *MemoryStore) SaveAttachment(_ context.Context, conversationID string, i
 		"content_type": attachment.ContentType,
 	}))
 	return attachment, nil
+}
+
+// RecordTrace appends one safe trace event to a conversation.
+// RecordTrace 向对话追加一条安全 trace 事件。
+func (s *MemoryStore) RecordTrace(_ context.Context, conversationID string, input TraceInput) (domain.ConversationDetail, error) {
+	if strings.TrimSpace(input.Kind) == "" {
+		return domain.ConversationDetail{}, errors.New("trace kind is required")
+	}
+	if strings.TrimSpace(input.Status) == "" {
+		return domain.ConversationDetail{}, errors.New("trace status is required")
+	}
+	if strings.TrimSpace(input.Summary) == "" {
+		return domain.ConversationDetail{}, errors.New("trace summary is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.sessions[conversationID]; !ok {
+		return domain.ConversationDetail{}, errors.New("conversation not found")
+	}
+	s.trace[conversationID] = append(s.trace[conversationID], traceEvent(conversationID, input.Kind, input.Status, input.Summary, input.Metadata))
+	return s.detailLocked(conversationID)
 }
 
 func (s *MemoryStore) detailLocked(conversationID string) (domain.ConversationDetail, error) {

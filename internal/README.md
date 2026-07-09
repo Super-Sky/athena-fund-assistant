@@ -8,6 +8,8 @@ This directory contains fund assistant application modules. Business objects liv
   - Runnable process entrypoints.
 - `account/`
   - Account dashboard store boundary and local demo read model.
+- `athena/`
+  - App-side Athena Agent Run client facade with HTTP and mock implementations.
 - `conversation/`
   - Agent workspace session, message, attachment metadata, upload, and trace boundary.
 - `data/`

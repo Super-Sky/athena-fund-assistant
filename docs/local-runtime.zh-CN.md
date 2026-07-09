@@ -9,7 +9,7 @@
 - PostgreSQL
 - Redis
 
-当前 API 使用内存 journal 和 mock provider；账户看板在 `DATABASE_URL` 存在时使用 PostgreSQL，在未设置时回退到内存 demo store。Redis 已进入 Docker 拓扑，供后续缓存、速率限制和异步刷新接入。
+当前 API 使用内存 journal 和 mock provider；账户看板在 `DATABASE_URL` 存在时使用 PostgreSQL，在未设置时回退到内存 demo store。Redis 已进入 Docker 拓扑，供后续缓存、速率限制和异步刷新接入。Athena client 未配置 `ATHENA_BASE_URL` 时使用本地 mock，配置后调用外部 Athena Agent Run API。
 
 API 启动前会先运行 provider validation。当前 mock provider 需要通过基金、个股、指数、USD/CNY 汇率和美股交易日历探针后才会开始监听端口。
 
@@ -35,6 +35,18 @@ Agent 工作台 skill 检查：
 
 ```bash
 curl http://127.0.0.1:8081/api/conversations/skills
+```
+
+Athena remote tools catalog 检查：
+
+```bash
+curl 'http://127.0.0.1:8081/internal/tools/catalog?base_url=http://127.0.0.1:8081'
+```
+
+连接真实 Athena：
+
+```bash
+ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
 ```
 
 PostgreSQL store 集成测试：
@@ -72,5 +84,6 @@ docker compose up --build
 
 - API 容器会读取 `DATABASE_URL` 并用于账户看板持久化；`REDIS_URL` 当前仍预留给后续缓存和异步任务。
 - API 会读取 `ATHENA_FUND_UPLOAD_DIR` 作为附件上传目录；未设置时使用系统临时目录。
+- API 会读取 `ATHENA_BASE_URL` 和可选 `ATHENA_AUTH_TOKEN`；未设置时使用 mock Athena client，便于单服务演示。
 - 当前 mock 数据必须在 UI / trace 中继续标记为临时数据。
-- 当前 Web 只调用 fund assistant API；Athena 双服务联调将在 Athena API 对接后补齐。
+- 当前 Web 仍只调用 fund assistant API；fund assistant API 会在用户消息后通过 Athena client 发起 Agent Run，并通过 `/internal/tools/execute` 暴露只读 remote business tools 供 Athena 回调。
