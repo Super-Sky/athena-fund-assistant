@@ -6,6 +6,8 @@ The server module maps MVP workflows to HTTP routes.
 
 - `server.go`
   - Exposes health, account overview, manual account holdings, Agent workspace, fund analysis, and journal creation endpoints using standard-library HTTP.
+- `athena_runs.go`
+  - Maps conversation messages into generic Athena Agent Run requests with context assets, OpenAI-compatible tools, constraints, and governance refs.
 - `remote_tools.go`
   - Exposes the fund assistant's Athena `remote_tool_execution.v1` catalog and callback handler without importing Athena internal Go packages.
 - `server_test.go`

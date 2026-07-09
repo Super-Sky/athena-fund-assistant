@@ -19,7 +19,7 @@
 - `POST /api/conversations/{conversation_id}/attachments`
   - 上传文件并返回 metadata。当前不解析附件，不把附件当作事实。
 - `POST /api/conversations/{conversation_id}/messages`
-  - 追加消息并写入本地 trace。Athena agent run 当前标记为 `pending`，等待真实 Athena client 接线。
+  - 追加消息并写入本地 trace，然后通过 Athena client 发起 Agent Run。未配置 `ATHENA_BASE_URL` 时使用 mock client，本地可演示；配置后调用外部 Athena `/api/agent/runs`。
 - `GET /internal/tools/catalog`
   - 输出可注册到 Athena remote tool registry 的 fund assistant 工具清单。
 - `POST /internal/tools/execute`
@@ -37,9 +37,9 @@
 
 ## Athena 边界
 
-- 当前 UI 和 API 已具备发起 Agent run 的本地 contract 形态，但还不实际调用 Athena Agent Run API。
+- 当前 UI 和 API 已具备发起 Agent run 的 contract 形态，并通过 app-side Athena client 写回 run trace。
 - fund assistant 已暴露 Athena remote tools callback；Athena 可以把只读业务工具注册到 remote registry 后回调本应用。
-- trace 中的 `athena_agent_run=pending` 表示下一步会通过 Athena Agent Run API 真实发起 run，并把 remote tool result 回写到 conversation trace。
+- 未配置 `ATHENA_BASE_URL` 时 trace 会显示 mock run；配置后 trace 会记录真实 Athena run_id、status 和 trace_available。
 - 基金业务对象、附件文件和业务 tool 实现仍保留在 fund assistant，不写入 Athena core。
 - 当前 remote tools 均为只读，`side_effect_level=none`，不执行自动交易或资金动作。
 
@@ -49,3 +49,5 @@
 - `yarn build` in `apps/web`
 - Browser smoke: 工作台、skill selector、上传入口和 trace timeline 可见。
 - Server test: remote tool catalog、`account_overview`、`fund_market_snapshot` 和 unknown-tool error envelope。
+- Server test: conversation message starts Athena mock run and writes `athena_agent_run=ok` trace。
+- Dual-service smoke: `./scripts/smoke_dual_service.sh` 启动 Athena、fund assistant 和 fake OpenAI-compatible 模型，验证 Athena remote registry、`account_overview` callback、fund conversation trace 回写。

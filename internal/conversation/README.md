@@ -6,7 +6,7 @@ The conversation module owns the local Agent workspace state for the fund assist
 
 - Owns conversation sessions, selectable skills, messages, attachment metadata, local upload storage, and safe trace events.
 - Does not parse attachment content into facts.
-- Does not call Athena directly in this slice; Athena run creation is represented as a pending trace event until the Athena client is wired.
+- Does not call Athena directly; the server/application layer records Athena run results through the trace boundary.
 - Does not store fund business objects in Athena core.
 
 ## File Index

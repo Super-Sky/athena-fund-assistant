@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/athena"
 	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -379,6 +380,50 @@ func TestRemoteToolCatalogAndExecution(t *testing.T) {
 	}
 }
 
+func TestConversationMessageStartsAthenaRun(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
+		Athena:        athena.MockClient{},
+	}).Routes()
+
+	createRR := performJSON(t, srv, http.MethodPost, "/api/conversations", createConversationRequest{
+		UserID:  "demo-user",
+		SkillID: "portfolio_review",
+		Title:   "Athena run",
+	})
+	if createRR.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createRR.Code, createRR.Body.String())
+	}
+	var detail domain.ConversationDetail
+	if err := json.Unmarshal(createRR.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("decode conversation: %v", err)
+	}
+
+	messageRR := performJSON(t, srv, http.MethodPost, "/api/conversations/"+detail.Session.ID+"/messages", addConversationMessageRequest{
+		Role:    "user",
+		Content: "请读取账户概览并给我一个复盘重点。",
+		SkillID: "portfolio_review",
+	})
+	if messageRR.Code != http.StatusOK {
+		t.Fatalf("message status=%d body=%s", messageRR.Code, messageRR.Body.String())
+	}
+	var updated domain.ConversationDetail
+	if err := json.Unmarshal(messageRR.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("decode updated detail: %v", err)
+	}
+	if !hasTraceStatus(updated.Trace, "athena_agent_run", "ok") {
+		t.Fatalf("trace missing accepted Athena run: %#v", updated.Trace)
+	}
+}
+
 func performJSON(t *testing.T, handler http.Handler, method, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 	payload, err := json.Marshal(body)
@@ -390,4 +435,13 @@ func performJSON(t *testing.T, handler http.Handler, method, path string, body a
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr
+}
+
+func hasTraceStatus(events []domain.ConversationTraceEvent, kind, status string) bool {
+	for _, event := range events {
+		if event.Kind == kind && event.Status == status {
+			return true
+		}
+	}
+	return false
 }

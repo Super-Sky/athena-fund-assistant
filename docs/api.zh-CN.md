@@ -12,6 +12,8 @@
 - 可通过环境变量 `ATHENA_FUND_API_ADDR` 覆盖。
 - 请求和响应均为 JSON。
 - API 允许本地 Web 开发源访问，当前 CORS 覆盖 `localhost` / `127.0.0.1` 的端口化 origin。
+- 未配置 `ATHENA_BASE_URL` 时使用本地 mock Athena client；配置后通过 `POST /api/agent/runs` 调用外部 Athena。
+- `ATHENA_AUTH_TOKEN` 可选，会作为 Bearer token 发给 Athena。
 - mock 数据必须在 trace 中显示 `mock_data_temporary=true`。
 - 金融输出必须包含多方案、依据、风险、反证条件和复盘时间。
 
@@ -146,7 +148,24 @@
 - `skill_id`
 - `attachment_ids`
 
-响应返回更新后的 `ConversationDetail`。当前会写入本地 trace；真实 Athena agent run 仍是 pending contract，不在本 slice 中调用 Athena。
+响应返回更新后的 `ConversationDetail`。服务会保存消息，随后通过 Athena client 发起一次通用 Agent Run，并把 run status、run_id、trace_available 和 stop_reason 写入对话 trace。未配置 `ATHENA_BASE_URL` 时该调用由 mock client 完成，方便本地演示。
+
+Agent Run 请求会把业务语义转换为通用 Athena 输入：
+
+- `goal`：用户消息。
+- `context_assets`：conversation ID、skill ID 和 attachment IDs；附件仍是 metadata-only。
+- `tools` / `enabled_tools`：OpenAI-compatible function tools，目前包含 `account_overview` 和 `fund_market_snapshot`。
+- `governance_refs`：无自动交易、无收益承诺、数据来源 metadata 必填。
+- `constraints`：禁止自动交易、禁止券商下单、必须包含风险和反证条件、禁止单一路径绝对结论。
+
+`athena_agent_run` trace metadata 当前包含：
+
+- `run_id`
+- `run_status`
+- `trace_available`
+- `stop_reason`
+- `tool_call_count`
+- `output_present`
 
 ## `GET /internal/tools/catalog`
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/athena"
 	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -49,6 +50,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("conversation store initialization failed: %v", err)
 	}
+	var athenaClient athena.Client = athena.MockClient{}
+	if athenaBaseURL := os.Getenv("ATHENA_BASE_URL"); athenaBaseURL != "" {
+		client, err := athena.NewHTTPClient(athenaBaseURL, os.Getenv("ATHENA_AUTH_TOKEN"))
+		if err != nil {
+			log.Fatalf("athena client initialization failed: %v", err)
+		}
+		athenaClient = client
+		log.Printf("athena client using %s", athenaBaseURL)
+	} else {
+		log.Printf("athena client using local mock")
+	}
 
 	svc := server.New(server.Dependencies{
 		Provider:      provider,
@@ -56,6 +68,7 @@ func main() {
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      accountStore,
 		Conversations: conversationStore,
+		Athena:        athenaClient,
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)

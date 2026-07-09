@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
+	"github.com/Super-Sky/athena-fund-assistant/internal/athena"
 	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -22,6 +23,7 @@ type Dependencies struct {
 	Journals      *journal.MemoryStore
 	Accounts      account.Store
 	Conversations conversation.Store
+	Athena        athena.Client
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -185,7 +187,8 @@ func (s *Server) handleAddConversationMessage(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	detail, err := s.deps.Conversations.AddMessage(r.Context(), strings.TrimSpace(r.PathValue("conversation_id")), conversation.MessageInput{
+	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
+	detail, err := s.deps.Conversations.AddMessage(r.Context(), conversationID, conversation.MessageInput{
 		Role:          strings.TrimSpace(req.Role),
 		Content:       strings.TrimSpace(req.Content),
 		SkillID:       strings.TrimSpace(req.SkillID),
@@ -194,6 +197,21 @@ func (s *Server) handleAddConversationMessage(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
+	}
+	role := strings.TrimSpace(req.Role)
+	if s.deps.Athena != nil && (role == "" || role == "user") {
+		if updated, runErr := s.startAthenaRunForMessage(r.Context(), conversationID, req); runErr == nil {
+			detail = updated
+		} else if updated, traceErr := s.deps.Conversations.RecordTrace(r.Context(), conversationID, conversation.TraceInput{
+			Kind:    "athena_agent_run",
+			Status:  "error",
+			Summary: "Athena agent run request failed.",
+			Metadata: map[string]string{
+				"error": runErr.Error(),
+			},
+		}); traceErr == nil {
+			detail = updated
+		}
 	}
 	writeJSON(w, http.StatusOK, detail)
 }
