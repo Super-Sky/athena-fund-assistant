@@ -263,6 +263,122 @@ func TestConversationWorkspaceWorkflow(t *testing.T) {
 	}
 }
 
+func TestRemoteToolCatalogAndExecution(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
+	}).Routes()
+
+	catalogRR := httptest.NewRecorder()
+	catalogReq := httptest.NewRequest(http.MethodGet, "/internal/tools/catalog?base_url=http://127.0.0.1:8081", nil)
+	srv.ServeHTTP(catalogRR, catalogReq)
+	if catalogRR.Code != http.StatusOK {
+		t.Fatalf("catalog status=%d body=%s", catalogRR.Code, catalogRR.Body.String())
+	}
+	var catalog struct {
+		ContractVersion string                   `json:"contract_version"`
+		Items           []remoteToolRegistration `json:"items"`
+	}
+	if err := json.Unmarshal(catalogRR.Body.Bytes(), &catalog); err != nil {
+		t.Fatalf("decode catalog: %v", err)
+	}
+	if catalog.ContractVersion != remoteToolContractVersion || len(catalog.Items) != 2 {
+		t.Fatalf("unexpected catalog = %#v", catalog)
+	}
+	if catalog.Items[0].Endpoint != "http://127.0.0.1:8081/internal/tools/execute" {
+		t.Fatalf("unexpected endpoint %q", catalog.Items[0].Endpoint)
+	}
+
+	overviewRR := performJSON(t, srv, http.MethodPost, "/internal/tools/execute", remoteToolExecutionRequest{
+		ContractVersion: remoteToolContractVersion,
+		RequestID:       "req_account",
+		ToolCallID:      "call_account",
+		RegistrationID:  "fund_account_overview_v1",
+		AppID:           "athena-fund-assistant",
+		ToolName:        "account_overview",
+		Arguments:       json.RawMessage(`{"user_id":"demo-user"}`),
+		Attempt:         1,
+	})
+	if overviewRR.Code != http.StatusOK {
+		t.Fatalf("overview tool status=%d body=%s", overviewRR.Code, overviewRR.Body.String())
+	}
+	var overviewResult remoteToolExecutionResponse
+	if err := json.Unmarshal(overviewRR.Body.Bytes(), &overviewResult); err != nil {
+		t.Fatalf("decode overview tool: %v", err)
+	}
+	if overviewResult.Status != "ok" || overviewResult.ToolCallID != "call_account" || overviewResult.RequestID != "req_account" {
+		t.Fatalf("unexpected overview result = %#v", overviewResult)
+	}
+	var overviewContent struct {
+		Tool     string                 `json:"tool"`
+		Overview domain.AccountOverview `json:"overview"`
+	}
+	if err := json.Unmarshal([]byte(overviewResult.Content), &overviewContent); err != nil {
+		t.Fatalf("decode overview content: %v", err)
+	}
+	if overviewContent.Tool != "account_overview" || overviewContent.Overview.Account.UserID != "demo-user" {
+		t.Fatalf("unexpected overview content = %#v", overviewContent)
+	}
+
+	snapshotRR := performJSON(t, srv, http.MethodPost, "/internal/tools/execute", remoteToolExecutionRequest{
+		ContractVersion: remoteToolContractVersion,
+		RequestID:       "req_snapshot",
+		ToolCallID:      "call_snapshot",
+		RegistrationID:  "fund_market_snapshot_v1",
+		AppID:           "athena-fund-assistant",
+		ToolName:        "fund_market_snapshot",
+		Arguments:       json.RawMessage(`{"instrument_code":"QQQ"}`),
+		Attempt:         1,
+	})
+	if snapshotRR.Code != http.StatusOK {
+		t.Fatalf("snapshot tool status=%d body=%s", snapshotRR.Code, snapshotRR.Body.String())
+	}
+	var snapshotResult remoteToolExecutionResponse
+	if err := json.Unmarshal(snapshotRR.Body.Bytes(), &snapshotResult); err != nil {
+		t.Fatalf("decode snapshot tool: %v", err)
+	}
+	var snapshotContent struct {
+		Tool         string              `json:"tool"`
+		FundSnapshot domain.FundSnapshot `json:"fund_snapshot"`
+	}
+	if err := json.Unmarshal([]byte(snapshotResult.Content), &snapshotContent); err != nil {
+		t.Fatalf("decode snapshot content: %v", err)
+	}
+	if snapshotContent.Tool != "fund_market_snapshot" || snapshotContent.FundSnapshot.Instrument.Code != "QQQ" {
+		t.Fatalf("unexpected snapshot content = %#v", snapshotContent)
+	}
+	if snapshotContent.FundSnapshot.Metadata.Provider == "" || snapshotContent.FundSnapshot.Metadata.Timezone != "America/New_York" {
+		t.Fatalf("snapshot metadata missing provider/timezone: %#v", snapshotContent.FundSnapshot.Metadata)
+	}
+
+	unknownRR := performJSON(t, srv, http.MethodPost, "/internal/tools/execute", remoteToolExecutionRequest{
+		ContractVersion: remoteToolContractVersion,
+		RequestID:       "req_unknown",
+		ToolCallID:      "call_unknown",
+		AppID:           "athena-fund-assistant",
+		ToolName:        "place_order",
+		Arguments:       json.RawMessage(`{}`),
+		Attempt:         1,
+	})
+	if unknownRR.Code != http.StatusBadRequest {
+		t.Fatalf("unknown status=%d body=%s", unknownRR.Code, unknownRR.Body.String())
+	}
+	var unknownResult remoteToolExecutionResponse
+	if err := json.Unmarshal(unknownRR.Body.Bytes(), &unknownResult); err != nil {
+		t.Fatalf("decode unknown tool: %v", err)
+	}
+	if unknownResult.Status != "error" || unknownResult.Error == nil || unknownResult.Error.Code != "unknown_tool" {
+		t.Fatalf("unexpected unknown result = %#v", unknownResult)
+	}
+}
+
 func performJSON(t *testing.T, handler http.Handler, method, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 	payload, err := json.Marshal(body)

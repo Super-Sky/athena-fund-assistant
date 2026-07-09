@@ -50,6 +50,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/conversations/{conversation_id}/attachments", s.handleUploadConversationAttachment)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
+	mux.HandleFunc("GET /internal/tools/catalog", s.handleRemoteToolCatalog)
+	mux.HandleFunc("POST /internal/tools/execute", s.handleRemoteToolExecution)
 	return withCORS(withJSON(mux))
 }
 
