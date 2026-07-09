@@ -1,9 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -16,7 +19,7 @@ import (
 type Dependencies struct {
 	Provider      data.Provider
 	DecisionMaker *decision.Engine
-	Journals      *journal.MemoryStore
+	Journals      journal.Store
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -36,8 +39,11 @@ func New(deps Dependencies) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /readyz", s.handleReady)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
+	mux.HandleFunc("GET /api/journals/{journalID}", s.handleGetJournal)
+	mux.HandleFunc("GET /api/reviews/{reviewID}", s.handleGetReview)
 	return withCORS(withJSON(mux))
 }
 
@@ -68,6 +74,16 @@ type journalResponse struct {
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.deps.Journals.Ping(ctx); err != nil {
+		writeError(w, http.StatusServiceUnavailable, errText("journal store unavailable"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
@@ -107,12 +123,55 @@ func (s *Server) handleCreateJournal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	entry, review, err := s.deps.Journals.Create(req.Matrix, req.SelectedOptionID, req.UserNotes)
-	if err != nil {
+	if err := req.Matrix.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	if !hasDecisionOption(req.Matrix, req.SelectedOptionID) {
+		writeError(w, http.StatusBadRequest, errText("selected option not found"))
+		return
+	}
+	entry, review, err := s.deps.Journals.Create(r.Context(), req.Matrix, req.SelectedOptionID, req.UserNotes)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, errText("journal store write failed"))
+		return
+	}
 	writeJSON(w, http.StatusCreated, journalResponse{Journal: entry, Review: review})
+}
+
+func hasDecisionOption(matrix domain.DecisionMatrix, optionID string) bool {
+	for _, option := range matrix.Options {
+		if option.ID == optionID {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) handleGetJournal(w http.ResponseWriter, r *http.Request) {
+	entry, err := s.deps.Journals.Entry(r.Context(), r.PathValue("journalID"))
+	if err != nil {
+		writeStoreReadError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]domain.JournalEntry{"journal": entry})
+}
+
+func (s *Server) handleGetReview(w http.ResponseWriter, r *http.Request) {
+	review, err := s.deps.Journals.Review(r.Context(), r.PathValue("reviewID"))
+	if err != nil {
+		writeStoreReadError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]domain.ReviewTask{"review": review})
+}
+
+func writeStoreReadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, journal.ErrEntryNotFound) || errors.Is(err, journal.ErrReviewNotFound) {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	writeError(w, http.StatusInternalServerError, errText("journal store read failed"))
 }
 
 type errText string
@@ -136,7 +195,7 @@ func withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		}
-		if r.Method == http.MethodOptions && (strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz") {
+		if r.Method == http.MethodOptions && (strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz" || r.URL.Path == "/readyz") {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

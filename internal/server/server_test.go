@@ -75,6 +75,40 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 	if journalResp.Review.Status != "open" {
 		t.Fatalf("unexpected review status %s", journalResp.Review.Status)
 	}
+
+	journalRead := performJSON(t, srv, "GET", "/api/journals/"+journalResp.Journal.ID, nil)
+	if journalRead.Code != http.StatusOK {
+		t.Fatalf("journal read status=%d body=%s", journalRead.Code, journalRead.Body.String())
+	}
+	if !bytes.Contains(journalRead.Body.Bytes(), []byte(journalResp.Journal.ID)) {
+		t.Fatalf("journal read body=%s, want journal id", journalRead.Body.String())
+	}
+
+	reviewRead := performJSON(t, srv, "GET", "/api/reviews/"+journalResp.Review.ID, nil)
+	if reviewRead.Code != http.StatusOK {
+		t.Fatalf("review read status=%d body=%s", reviewRead.Code, reviewRead.Body.String())
+	}
+	if !bytes.Contains(reviewRead.Body.Bytes(), []byte(journalResp.Review.ID)) {
+		t.Fatalf("review read body=%s, want review id", reviewRead.Body.String())
+	}
+}
+
+func TestReadinessAndMissingJournal(t *testing.T) {
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+	}).Routes()
+
+	ready := performJSON(t, srv, "GET", "/readyz", nil)
+	if ready.Code != http.StatusOK {
+		t.Fatalf("ready status=%d body=%s", ready.Code, ready.Body.String())
+	}
+
+	missing := performJSON(t, srv, "GET", "/api/journals/missing", nil)
+	if missing.Code != http.StatusNotFound {
+		t.Fatalf("missing journal status=%d body=%s", missing.Code, missing.Body.String())
+	}
 }
 
 func TestCORSPreflightForLocalWeb(t *testing.T) {

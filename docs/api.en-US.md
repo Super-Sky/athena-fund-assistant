@@ -17,7 +17,7 @@ This API belongs to the fund assistant business application layer, not Athena co
 
 ## `GET /healthz`
 
-Checks whether the service is alive.
+Checks whether the process is alive without accessing the database.
 
 Response example:
 
@@ -26,6 +26,10 @@ Response example:
   "status": "ok"
 }
 ```
+
+## `GET /readyz`
+
+Checks whether the journal store is available. In Docker, this verifies the PostgreSQL connection and returns `503` when unavailable.
 
 ## `POST /api/analysis/fund`
 
@@ -79,9 +83,17 @@ Response fields:
 - `journal`
 - `review`
 
+## `GET /api/journals/{journalID}`
+
+Reads a persisted decision journal. Returns `404` when it does not exist.
+
+## `GET /api/reviews/{reviewID}`
+
+Reads a persisted review task. Returns `404` when it does not exist.
+
 ## Current Boundaries
 
-- The journal store is in-memory and is lost on service restart.
+- When `DATABASE_URL` is configured, journals and review tasks are persisted in PostgreSQL. Without it, local development falls back to an in-memory store and logs that the state is non-durable.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- PostgreSQL, Redis, Athena agent-run integration, and real providers are later implementation items.
+- Redis caching, Athena agent-run integration, and real providers are later implementation items.

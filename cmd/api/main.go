@@ -15,6 +15,16 @@ import (
 
 func main() {
 	addr := getenv("ATHENA_FUND_API_ADDR", ":8081")
+	store, err := openJournalStore(context.Background())
+	if err != nil {
+		log.Fatalf("initialize journal store: %v", err)
+	}
+	defer func() {
+		if err := store.Close(context.Background()); err != nil {
+			log.Printf("close journal store: %v", err)
+		}
+	}()
+
 	provider := data.NewMockProvider()
 	report := data.ValidateProvider(context.Background(), provider, data.ValidationOptions{
 		FundCodes:     []string{"QQQ"},
@@ -31,13 +41,30 @@ func main() {
 	svc := server.New(server.Dependencies{
 		Provider:      provider,
 		DecisionMaker: decision.NewEngine(),
-		Journals:      journal.NewMemoryStore(),
+		Journals:      store,
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)
 	if err := http.ListenAndServe(addr, svc.Routes()); err != nil {
 		log.Fatalf("api server stopped: %v", err)
 	}
+}
+
+func openJournalStore(parent context.Context) (journal.Store, error) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Print("DATABASE_URL is empty; using non-durable in-memory journal store")
+		return journal.NewMemoryStore(), nil
+	}
+
+	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
+	defer cancel()
+	store, err := journal.NewPostgresStore(ctx, databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	log.Print("using PostgreSQL journal store")
+	return store, nil
 }
 
 func getenv(key, fallback string) string {
