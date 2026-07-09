@@ -17,7 +17,7 @@
 
 ## `GET /healthz`
 
-检查服务是否存活。
+检查进程是否存活，不访问数据库。
 
 响应示例：
 
@@ -26,6 +26,10 @@
   "status": "ok"
 }
 ```
+
+## `GET /readyz`
+
+检查 journal store 是否可用。Docker 环境中该检查会验证 PostgreSQL 连接；不可用时返回 `503`。
 
 ## `POST /api/analysis/fund`
 
@@ -79,9 +83,17 @@
 - `journal`
 - `review`
 
+## `GET /api/journals/{journalID}`
+
+读取已经保存的决策日志。找不到时返回 `404`。
+
+## `GET /api/reviews/{reviewID}`
+
+读取已经保存的复盘任务。找不到时返回 `404`。
+
 ## 当前边界
 
-- 当前 journal 使用内存存储，服务重启后会丢失。
+- 配置 `DATABASE_URL` 时，journal 与 review task 持久化到 PostgreSQL；不配置时仅为本地开发回退到内存存储，并在日志中明确提示非持久化状态。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- PostgreSQL、Redis、Athena agent run 对接和真实 provider 是后续实现项。
+- Redis 缓存、Athena agent run 对接和真实 provider 是后续实现项。

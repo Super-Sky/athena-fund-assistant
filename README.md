@@ -55,9 +55,9 @@ This repository now contains the first local Go API slice for the fund assistant
 - React + TypeScript + Vite research console
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
-- in-memory decision journal and review task
+- PostgreSQL-backed decision journal and review task, with an in-memory development fallback
 
-The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis, but the API does not persist to PostgreSQL or cache through Redis yet. Athena runtime integration and real data providers remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis; the API persists journals and review tasks to PostgreSQL when `DATABASE_URL` is configured. Redis caching, Athena runtime integration, and real data providers remain active MVP work.
 
 ## Local Run
 

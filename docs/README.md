@@ -20,6 +20,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 基金助手 Web MVP 当前实现的中文说明、边界和验收证据。
 - `features/feature-fund-assistant-web.en-US.md`
   - English description, boundaries, and verification evidence for the current fund assistant web MVP.
+- `features/feature-journal-persistence.zh-CN.md`
+  - 决策日志与复盘任务 PostgreSQL 持久化能力、边界和验证方式。
+- `features/feature-journal-persistence.en-US.md`
+  - English capability, boundaries, and verification for PostgreSQL-backed journals and review tasks.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`
