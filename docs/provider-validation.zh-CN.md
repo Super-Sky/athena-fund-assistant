@@ -63,6 +63,11 @@ TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
 
 命令输出 JSON 报告。任何必需探针失败时，命令返回非零退出码。
 
+当前验证快照见：
+
+- `docs/data-source-validation-snapshot.zh-CN.md`
+- `docs/data-source-validation-snapshot.en-US.md`
+
 ## 验收标准
 
 - provider validation report 必须 `passed=true`。

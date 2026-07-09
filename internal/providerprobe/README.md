@@ -5,7 +5,7 @@ The provider probe module validates real data-source response shape, error behav
 ## File Index
 
 - `report.go`
-  - Defines the JSON validation report and check shape.
+  - Defines the JSON validation report, governance admission metadata, and check shape.
 - `http.go`
   - Provides a small bounded-timeout JSON HTTP client and field helpers.
 - `alpha_vantage.go`

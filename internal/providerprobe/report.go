@@ -5,11 +5,16 @@ import "time"
 // Report records validation evidence for a real data source before provider coding.
 // Report 在 provider 编码前记录真实数据源验证证据。
 type Report struct {
-	Provider     string    `json:"provider"`
-	GeneratedAt  time.Time `json:"generated_at"`
-	Passed       bool      `json:"passed"`
-	LicenseTerms string    `json:"license_terms"`
-	Checks       []Check   `json:"checks"`
+	Provider                 string    `json:"provider"`
+	GeneratedAt              time.Time `json:"generated_at"`
+	Passed                   bool      `json:"passed"`
+	LicenseTerms             string    `json:"license_terms"`
+	Coverage                 []string  `json:"coverage,omitempty"`
+	CredentialRequired       bool      `json:"credential_required"`
+	ProductionDefaultAllowed bool      `json:"production_default_allowed"`
+	FailurePolicy            string    `json:"failure_policy,omitempty"`
+	ValidationNotes          []string  `json:"validation_notes,omitempty"`
+	Checks                   []Check   `json:"checks"`
 }
 
 // Check records one endpoint probe and the observed response shape.
@@ -42,9 +47,10 @@ func (r *Report) Add(check Check) {
 // NewReport 创建默认通过的报告，直到某项检查失败。
 func NewReport(provider, licenseTerms string) Report {
 	return Report{
-		Provider:     provider,
-		GeneratedAt:  time.Now().UTC(),
-		Passed:       true,
-		LicenseTerms: licenseTerms,
+		Provider:                 provider,
+		GeneratedAt:              time.Now().UTC(),
+		Passed:                   true,
+		LicenseTerms:             licenseTerms,
+		ProductionDefaultAllowed: false,
 	}
 }

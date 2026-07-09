@@ -11,3 +11,5 @@ TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
 ```
 
 The command emits a JSON validation report and exits non-zero when required probes fail.
+
+The report also records governance fields such as `coverage`, `credential_required`, `production_default_allowed`, `failure_policy`, and `validation_notes`. A failed report means the source is not admitted into the default decision workflow; it may still be kept as a candidate until credentials, quota, network, and terms are validated.

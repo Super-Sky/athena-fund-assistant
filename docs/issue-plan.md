@@ -118,6 +118,7 @@ Acceptance:
 - At least one China live provider candidate is selected for MVP implementation.
 - Tushare, AKShare/Eastmoney, exchange, and AMAC paths are documented with risks.
 - Experimental providers are clearly marked as non-production defaults.
+- `docs/data-source-validation-snapshot.*.md` records current probe evidence and states that Tushare cannot enter the default workflow until a user token passes validation.
 
 ## Issue 11: US Equity, ETF, And Index Data Source Research
 
@@ -128,6 +129,7 @@ Acceptance:
 - At least one US live provider candidate is selected for MVP implementation.
 - Alpha Vantage, FMP, Tiingo, Nasdaq Data Link, Stooq, and Yahoo/yfinance paths are documented with risks.
 - US equities, ETFs, indices, FX, timezone, delay, and non-trading-day handling are part of the provider contract.
+- `docs/data-source-validation-snapshot.*.md` records current probe evidence and states that Alpha Vantage cannot enter the default workflow until a real API key passes validation.
 
 ## Issue 12: Docker Compose MVP Runtime
 

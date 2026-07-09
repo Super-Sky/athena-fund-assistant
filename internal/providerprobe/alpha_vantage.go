@@ -43,6 +43,13 @@ func ProbeAlphaVantage(ctx context.Context, cfg AlphaVantageConfig) Report {
 	}
 
 	report := NewReport("alpha_vantage", "alpha_vantage_terms_required")
+	report.Coverage = []string{"us_equity_quote", "us_etf_profile", "us_etf_daily_price", "fx_daily_usd_cny"}
+	report.CredentialRequired = true
+	report.FailurePolicy = "fall back to mock_or_csv and mark data temporary when API key, quota, or schema validation fails"
+	report.ValidationNotes = []string{
+		"free API key path is suitable for MVP validation but quota and terms must be respected",
+		"not enabled as a production default until the operator confirms terms and configures a key",
+	}
 	client := NewJSONClient(cfg.Timeout)
 
 	probes := []struct {
