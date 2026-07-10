@@ -947,3 +947,469 @@ textarea:focus {
     font-size: 2.35rem;
   }
 }
+
+/* Calm, task-focused surface system for the investment workspace. */
+/* 面向投资工作台的克制、任务优先视觉层。 */
+:root {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  --paper: #ffffff;
+  --ink: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #d2d2d7;
+  --green: #287a5b;
+  --green-soft: #e7f3ed;
+  --blue: #0071e3;
+  --blue-soft: #e8f2ff;
+  --amber: #8a5b14;
+  --amber-soft: #fff4df;
+  --red: #c43d34;
+  --red-soft: #fff0ee;
+  --shadow: 0 10px 28px rgb(28 28 30 / 7%);
+}
+
+html {
+  background: #f5f5f7;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #f5f5f7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, color 180ms ease,
+    transform 180ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(0 113 227 / 28%);
+  outline-offset: 2px;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.app-shell {
+  padding: 24px;
+  background: #f5f5f7;
+}
+
+.topbar,
+.account-dashboard,
+.agent-workspace,
+.knowledge-workspace,
+.workspace {
+  max-width: 1360px;
+}
+
+.topbar {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+h1 {
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.status-strip {
+  gap: 6px;
+}
+
+.status-pill,
+.tag {
+  border-color: transparent;
+  border-radius: 6px;
+  min-height: 28px;
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.status-pill.green,
+.tag.evidence {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.status-pill.blue {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.status-pill.amber,
+.tag.warning {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.tag.risk {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.account-dashboard,
+.agent-chat,
+.agent-side,
+.knowledge-profile,
+.knowledge-list-panel,
+.control-panel,
+.metric-board,
+.trace-board,
+.options-panel,
+.journal-panel,
+.empty-state {
+  border-color: rgb(29 29 31 / 9%);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.account-dashboard {
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.agent-workspace,
+.knowledge-workspace {
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.agent-chat,
+.agent-side,
+.knowledge-profile,
+.knowledge-list-panel {
+  gap: 16px;
+  padding: 20px;
+}
+
+.workspace {
+  gap: 16px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+
+.account-metrics {
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+
+.account-metrics .metric {
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--line);
+  padding: 14px 16px;
+  background: transparent;
+}
+
+.account-metrics .metric:last-child {
+  border-right: 0;
+}
+
+.metric {
+  border-color: rgb(29 29 31 / 9%);
+  background: #fafafa;
+}
+
+.metric strong,
+.trend-point strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.holding-list,
+.attachment-list,
+.message-list,
+.trace-timeline,
+.knowledge-list {
+  gap: 0;
+}
+
+.holding-row,
+.message-row,
+.attachment-row,
+.trace-event,
+.knowledge-card {
+  border-color: var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.holding-row,
+.message-row,
+.attachment-row,
+.trace-event,
+.knowledge-card {
+  border-left: 0;
+  border-right: 0;
+}
+
+.holding-row + .holding-row,
+.message-row + .message-row,
+.attachment-row + .attachment-row,
+.trace-event + .trace-event,
+.knowledge-card + .knowledge-card {
+  border-top: 0;
+}
+
+.message-row,
+.attachment-row,
+.trace-event,
+.knowledge-card {
+  padding: 12px 0;
+}
+
+.message-row strong,
+.attachment-row strong,
+.trace-event strong,
+.knowledge-card strong {
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.trace-event.pending,
+.trace-event.unsupported,
+.trace-event.ok {
+  border-color: var(--line);
+  background: transparent;
+}
+
+.agent-md {
+  border: 0;
+  border-radius: 6px;
+  padding: 14px;
+  background: #f5f5f7;
+  font-size: 0.8rem;
+}
+
+.panel-title {
+  gap: 9px;
+}
+
+.panel-title p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.panel-title-icon {
+  border-color: transparent;
+  border-radius: 6px;
+  background: #f5f5f7;
+  color: var(--blue);
+}
+
+.control-panel {
+  gap: 16px;
+  padding: 20px;
+  top: 16px;
+}
+
+.chip {
+  border-radius: 6px;
+  background: #f5f5f7;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.chip:hover,
+.upload-button:hover {
+  border-color: rgb(0 113 227 / 45%);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.chip.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.field span {
+  color: #515154;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+input,
+select,
+textarea {
+  border-color: #d2d2d7;
+  border-radius: 6px;
+  background: #fbfbfd;
+  font-size: 0.9rem;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #aeaeb2;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgb(0 113 227 / 14%);
+}
+
+.divider {
+  border-top-style: solid;
+}
+
+.primary-action,
+.secondary-action,
+.upload-button {
+  border-radius: 6px;
+  font-weight: 650;
+}
+
+.primary-action {
+  background: var(--blue);
+  color: #fff;
+}
+
+.primary-action:hover:not(:disabled) {
+  background: #0077ed;
+}
+
+.secondary-action {
+  border-color: #d2d2d7;
+  background: #fff;
+  color: var(--blue);
+}
+
+.secondary-action:hover:not(:disabled) {
+  border-color: rgb(0 113 227 / 45%);
+  background: var(--blue-soft);
+}
+
+.upload-button {
+  border-color: #d2d2d7;
+  background: #fff;
+  color: var(--blue);
+}
+
+.snapshot-grid {
+  gap: 16px;
+}
+
+.metric-row {
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.option-grid {
+  gap: 8px;
+}
+
+.option-card {
+  border-color: #d2d2d7;
+  border-radius: 6px;
+  min-height: 0;
+  padding: 16px;
+  background: #fbfbfd;
+}
+
+.option-card:hover {
+  border-color: rgb(0 113 227 / 48%);
+  background: #fff;
+}
+
+.option-card.selected {
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+
+.option-topline strong,
+.option-detail {
+  color: var(--blue);
+}
+
+.option-detail {
+  border-left-color: var(--blue);
+}
+
+.review-box {
+  border-color: rgb(0 113 227 / 18%);
+  background: var(--blue-soft);
+}
+
+.empty-state {
+  min-height: 380px;
+}
+
+.empty-icon {
+  border-color: transparent;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+@media (max-width: 780px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .topbar {
+    gap: 14px;
+  }
+
+  .status-strip {
+    gap: 5px;
+  }
+
+  .account-dashboard,
+  .agent-chat,
+  .agent-side,
+  .knowledge-profile,
+  .knowledge-list-panel,
+  .control-panel,
+  .metric-board,
+  .trace-board,
+  .options-panel,
+  .journal-panel,
+  .empty-state {
+    padding: 16px;
+  }
+
+  .account-metrics {
+    border: 0;
+  }
+
+  .account-metrics .metric {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

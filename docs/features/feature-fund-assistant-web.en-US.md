@@ -21,6 +21,13 @@ This feature moves the fund assistant from a local API slice to an interactive w
 - `docker-compose.yml` adds the `web` service on port `5173` by default.
 - `docs/local-runtime.*.md` and `docs/api.*.md` record the web, local CORS, and Compose runtime paths.
 
+## Interface Principles
+
+- The page is ordered as account overview, Agent conversation, user preferences and knowledge, then strategy generation, so the most frequently reviewed and acted-on information appears first.
+- A cool-gray neutral base and one blue primary action preserve focus. Source, governance, and temporary-data state stay visible through low-noise labels.
+- Metrics and holdings use a continuous divided hierarchy instead of turning every item into a heavy card. Trace remains complete but reads as supporting information.
+- Desktop retains a compact input-and-output split. Mobile collapses to one column; the strategy output must never be compressed sideways or create horizontal page scrolling.
+
 ## Interaction Flow
 
 1. The user enters risk preference, drawdown constraints, single-instrument cap, and holding data in the web app.
@@ -50,6 +57,7 @@ This feature moves the fund assistant from a local API slice to an interactive w
   - Select the balanced option
   - Click `保存 journal`
   - Confirm the review task appears with no error banner
+  - At 390px width, confirm account metrics, holdings, conversation, and strategy output use one column with no horizontal page scrolling
 
 ## Skill Decision
 

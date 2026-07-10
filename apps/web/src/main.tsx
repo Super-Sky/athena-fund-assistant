@@ -654,9 +654,9 @@ function App() {
           <h1>基金研究决策台</h1>
         </div>
         <div className="status-strip" aria-label="runtime status">
-          <StatusPill icon="shield" label="先验证后编码" tone="green" />
-          <StatusPill icon="database" label="Mock 数据" tone="amber" />
-          <StatusPill icon="check" label="无自动交易" tone="blue" />
+          <StatusPill icon="shield" label="可追溯分析" tone="blue" />
+          <StatusPill icon="database" label="数据待验证" tone="amber" />
+          <StatusPill icon="check" label="只读建议" tone="green" />
         </div>
       </header>
 
