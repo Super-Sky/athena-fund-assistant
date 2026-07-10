@@ -13,6 +13,7 @@ import (
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
+	"github.com/Super-Sky/athena-fund-assistant/internal/preference"
 	"github.com/Super-Sky/athena-fund-assistant/internal/server"
 )
 
@@ -62,6 +63,7 @@ func main() {
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      accountStore,
 		Conversations: conversationStore,
+		Preferences:   preference.NewMemoryStore(),
 		Athena:        athenaClient,
 	})
 

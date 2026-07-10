@@ -16,6 +16,7 @@ import (
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
+	"github.com/Super-Sky/athena-fund-assistant/internal/preference"
 )
 
 func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
@@ -421,6 +422,75 @@ func TestConversationMessageStartsAthenaRun(t *testing.T) {
 	}
 	if !hasTraceStatus(updated.Trace, "athena_agent_run", "ok") {
 		t.Fatalf("trace missing accepted Athena run: %#v", updated.Trace)
+	}
+}
+
+func TestPreferenceKnowledgeWorkflow(t *testing.T) {
+	conversations, err := conversation.NewMemoryStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("new conversation store: %v", err)
+	}
+	srv := New(Dependencies{
+		Provider:      data.NewMockProvider(),
+		DecisionMaker: decision.NewEngine(),
+		Journals:      journal.NewMemoryStore(),
+		Accounts:      account.NewMemoryStore(),
+		Conversations: conversations,
+		Preferences:   preference.NewMemoryStore(),
+	}).Routes()
+
+	workspaceRR := httptest.NewRecorder()
+	srv.ServeHTTP(workspaceRR, httptest.NewRequest(http.MethodGet, "/api/users/demo-user/knowledge", nil))
+	if workspaceRR.Code != http.StatusOK {
+		t.Fatalf("workspace status=%d body=%s", workspaceRR.Code, workspaceRR.Body.String())
+	}
+	var workspace domain.KnowledgeWorkspace
+	if err := json.Unmarshal(workspaceRR.Body.Bytes(), &workspace); err != nil {
+		t.Fatalf("decode workspace: %v", err)
+	}
+	if workspace.Preference.ActiveRevisionID == "" || len(workspace.Items) == 0 || len(workspace.Audit) == 0 {
+		t.Fatalf("unexpected seeded workspace: %#v", workspace)
+	}
+
+	draftRR := performJSON(t, srv, http.MethodPost, "/api/users/demo-user/knowledge/drafts", preference.KnowledgeInput{
+		Title:      "Volatility review rule",
+		Category:   "review_rule",
+		Content:    "When volatility is above 18%, require a seven-day review before adding exposure.",
+		Tags:       []string{"volatility", "review"},
+		Source:     "server_test",
+		Author:     "tester",
+		Confidence: 0.8,
+		Summary:    "Add volatility review rule",
+	})
+	if draftRR.Code != http.StatusCreated {
+		t.Fatalf("draft status=%d body=%s", draftRR.Code, draftRR.Body.String())
+	}
+	var drafted domain.KnowledgeWorkspace
+	if err := json.Unmarshal(draftRR.Body.Bytes(), &drafted); err != nil {
+		t.Fatalf("decode draft: %v", err)
+	}
+	item := drafted.Items[len(drafted.Items)-1]
+	revision := drafted.Revisions[len(drafted.Revisions)-1]
+	if item.Status != domain.KnowledgeDraft || revision.Status != domain.KnowledgeDraft {
+		t.Fatalf("expected draft item and revision, got item=%s revision=%s", item.Status, revision.Status)
+	}
+
+	activateRR := performJSON(t, srv, http.MethodPost, "/api/users/demo-user/knowledge/"+item.ID+"/activate", activateRevisionRequest{RevisionID: revision.ID})
+	if activateRR.Code != http.StatusOK {
+		t.Fatalf("activate status=%d body=%s", activateRR.Code, activateRR.Body.String())
+	}
+	var activated domain.KnowledgeWorkspace
+	if err := json.Unmarshal(activateRR.Body.Bytes(), &activated); err != nil {
+		t.Fatalf("decode activated: %v", err)
+	}
+	found := false
+	for _, value := range activated.Items {
+		if value.ID == item.ID && value.Status == domain.KnowledgeActive && value.ActiveRevisionID == revision.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("activated item not found: %#v", activated.Items)
 	}
 }
 

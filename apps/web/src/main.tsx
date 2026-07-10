@@ -236,6 +236,71 @@ type ConversationDetail = {
   trace: ConversationTraceEvent[];
 };
 
+type PreferenceProfile = {
+  user_id: string;
+  risk_preference: RiskPreference;
+  communication_style: string;
+  default_strategy_level: string;
+  preferred_assets: string[] | null;
+  blocked_assets: string[] | null;
+  review_frequency_days: number;
+  agent_md: string;
+  active_revision_id: string;
+  updated_at: string;
+  source: string;
+  author: string;
+  confidence: number;
+  schema_version: string;
+  governance_decision: string;
+  governance_decision_notes: string;
+};
+
+type KnowledgeItem = {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  tags: string[] | null;
+  status: string;
+  active_revision_id: string;
+  source: string;
+  author: string;
+  confidence: number;
+  schema_version: string;
+  governance_decision: string;
+  governance_decision_notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type KnowledgeRevision = {
+  id: string;
+  target_type: string;
+  target_id: string;
+  status: string;
+  summary: string;
+  source: string;
+  author: string;
+  confidence: number;
+  governance_decision: string;
+  created_at: string;
+};
+
+type KnowledgeAuditEvent = {
+  id: string;
+  action: string;
+  target_id: string;
+  summary: string;
+  created_at: string;
+};
+
+type KnowledgeWorkspace = {
+  preference: PreferenceProfile;
+  items: KnowledgeItem[];
+  revisions: KnowledgeRevision[];
+  audit: KnowledgeAuditEvent[];
+};
+
 type InstrumentPreset = {
   code: string;
   name: string;
@@ -315,6 +380,13 @@ function App() {
   const [accountOverview, setAccountOverview] = useState<AccountOverview | null>(null);
   const [skills, setSkills] = useState<ConversationSkill[]>([]);
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
+  const [knowledge, setKnowledge] = useState<KnowledgeWorkspace | null>(null);
+  const [knowledgeDraft, setKnowledgeDraft] = useState({
+    category: "review_rule",
+    content: "When volatility is above 18%, require a seven-day review before adding exposure.",
+    tags: "volatility, review",
+    title: "Volatility review rule"
+  });
   const [selectedSkillID, setSelectedSkillID] = useState("fund_research");
   const [chatInput, setChatInput] = useState("请结合我的账户收益和持仓，给出今天应该复盘的重点。");
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -322,6 +394,7 @@ function App() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
+  const [savingKnowledge, setSavingKnowledge] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedOption = useMemo(
@@ -346,6 +419,24 @@ function App() {
       .finally(() => {
         if (!cancelled) {
           setLoadingAccount(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchJSON<KnowledgeWorkspace>("/api/users/demo-user/knowledge", { method: "GET" })
+      .then((response) => {
+        if (!cancelled) {
+          setKnowledge(response);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
         }
       });
     return () => {
@@ -514,6 +605,47 @@ function App() {
     }
   }
 
+  async function saveKnowledgeDraft() {
+    setSavingKnowledge(true);
+    setError(null);
+    try {
+      const response = await fetchJSON<KnowledgeWorkspace>("/api/users/demo-user/knowledge/drafts", {
+        method: "POST",
+        body: JSON.stringify({
+          author: "demo-user",
+          category: knowledgeDraft.category,
+          confidence: 0.72,
+          content: knowledgeDraft.content,
+          source: "manual_ui",
+          summary: `Draft ${knowledgeDraft.title}`,
+          tags: knowledgeDraft.tags.split(",").map((item) => item.trim()).filter(Boolean),
+          title: knowledgeDraft.title
+        })
+      });
+      setKnowledge(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingKnowledge(false);
+    }
+  }
+
+  async function activateKnowledge(itemID: string, revisionID: string) {
+    setSavingKnowledge(true);
+    setError(null);
+    try {
+      const response = await fetchJSON<KnowledgeWorkspace>(`/api/users/demo-user/knowledge/${itemID}/activate`, {
+        method: "POST",
+        body: JSON.stringify({ revision_id: revisionID })
+      });
+      setKnowledge(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingKnowledge(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -541,6 +673,15 @@ function App() {
         sending={sendingMessage}
         skills={skills}
         uploading={uploadingAttachment}
+      />
+
+      <KnowledgeWorkspacePanel
+        draft={knowledgeDraft}
+        knowledge={knowledge}
+        saving={savingKnowledge}
+        onActivate={activateKnowledge}
+        onDraftChange={setKnowledgeDraft}
+        onSaveDraft={saveKnowledgeDraft}
       />
 
       <section className="workspace">
@@ -874,6 +1015,111 @@ function AgentWorkspace({
               <small>
                 {event.status} · {formatDate(event.created_at)}
               </small>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function KnowledgeWorkspacePanel({
+  draft,
+  knowledge,
+  onActivate,
+  onDraftChange,
+  onSaveDraft,
+  saving
+}: {
+  draft: { category: string; content: string; tags: string; title: string };
+  knowledge: KnowledgeWorkspace | null;
+  onActivate: (itemID: string, revisionID: string) => void;
+  onDraftChange: (value: { category: string; content: string; tags: string; title: string }) => void;
+  onSaveDraft: () => void;
+  saving: boolean;
+}) {
+  const latestDraft = [...(knowledge?.revisions ?? [])].reverse().find((revision) => revision.status === "draft" && revision.target_type === "knowledge_item");
+  return (
+    <section className="knowledge-workspace">
+      <div className="knowledge-profile">
+        <PanelTitle icon="shield" title="用户偏好 · agent.md" caption="长期偏好、默认策略层级和治理状态" />
+        {knowledge ? (
+          <>
+            <div className="knowledge-flags">
+              <span className="tag evidence">{knowledge.preference.risk_preference}</span>
+              <span className="tag evidence">{knowledge.preference.default_strategy_level}</span>
+              <span className="tag warning">{knowledge.preference.governance_decision}</span>
+            </div>
+            <pre className="agent-md">{knowledge.preference.agent_md}</pre>
+            <dl className="trace-list compact">
+              <TraceItem label="review" value={`${knowledge.preference.review_frequency_days} days`} />
+              <TraceItem label="source" value={knowledge.preference.source} />
+              <TraceItem label="confidence" value={`${Math.round(knowledge.preference.confidence * 100)}%`} />
+              <TraceItem label="schema" value={knowledge.preference.schema_version} />
+            </dl>
+          </>
+        ) : (
+          <p className="empty-copy">正在读取用户偏好。</p>
+        )}
+      </div>
+
+      <div className="knowledge-list-panel">
+        <PanelTitle icon="database" title="策略知识库" caption="草稿可保存，正式启用需要治理激活" />
+        <div className="knowledge-list">
+          {(knowledge?.items ?? []).map((item) => (
+            <div className="knowledge-card" key={item.id}>
+              <div>
+                <strong>{item.title}</strong>
+                <span>
+                  {item.category} · {item.status} · {item.source}
+                </span>
+              </div>
+              <p>{item.content}</p>
+              <TagList items={item.tags ?? []} empty="no tags" tone={item.status === "active" ? "evidence" : "warning"} />
+            </div>
+          ))}
+        </div>
+
+        <div className="knowledge-editor">
+          <label className="field">
+            <span>标题</span>
+            <input value={draft.title} onChange={(event) => onDraftChange({ ...draft, title: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>类别</span>
+            <input value={draft.category} onChange={(event) => onDraftChange({ ...draft, category: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>内容</span>
+            <textarea value={draft.content} onChange={(event) => onDraftChange({ ...draft, content: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>标签</span>
+            <input value={draft.tags} onChange={(event) => onDraftChange({ ...draft, tags: event.target.value })} />
+          </label>
+          <div className="knowledge-actions">
+            <button className="secondary-action" disabled={saving} onClick={onSaveDraft} type="button">
+              <Icon name="note" />
+              {saving ? "保存中" : "保存草稿"}
+            </button>
+            <button
+              className="secondary-action"
+              disabled={saving || !latestDraft}
+              onClick={() => latestDraft && onActivate(latestDraft.target_id, latestDraft.id)}
+              type="button"
+            >
+              <Icon name="check" />
+              激活最新草稿
+            </button>
+          </div>
+        </div>
+
+        <div className="trace-timeline">
+          {(knowledge?.audit ?? []).slice(-4).map((event) => (
+            <div className="trace-event ok" key={event.id}>
+              <strong>{event.action}</strong>
+              <span>{event.summary}</span>
+              <small>{formatDate(event.created_at)}</small>
             </div>
           ))}
         </div>

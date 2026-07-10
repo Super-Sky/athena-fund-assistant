@@ -266,6 +266,75 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `governance_checks`
 - `mock_data_temporary`
 
+## `GET /api/users/{user_id}/knowledge`
+
+读取用户长期偏好、`agent.md`、策略知识库、版本记录和审计事件。
+
+响应字段：
+
+- `preference`：用户风险偏好、表达偏好、默认策略层级、偏好/禁用资产、复盘频率、`agent_md`、active revision 和治理信息。
+- `items`：策略知识条目，包含标题、分类、内容、标签、状态、active revision、source、author、confidence、schema_version 和 governance decision。
+- `revisions`：偏好或知识条目的不可变版本记录。
+- `audit`：草稿保存、激活、回滚等审计事件。
+
+## `POST /api/users/{user_id}/preferences/drafts`
+
+保存用户偏好 / `agent.md` 草稿，不立即启用。
+
+请求字段：
+
+- `risk_preference`
+- `communication_style`
+- `default_strategy_level`
+- `preferred_assets`
+- `blocked_assets`
+- `review_frequency_days`
+- `agent_md`
+- `source`
+- `author`
+- `confidence`
+- `summary`
+
+## `POST /api/users/{user_id}/preferences/activate`
+
+显式激活一个偏好 revision。
+
+请求字段：
+
+- `revision_id`
+
+## `POST /api/users/{user_id}/knowledge/drafts`
+
+保存一条策略知识草稿，不立即启用。
+
+请求字段：
+
+- `item_id`：可选；为空时创建新条目。
+- `title`
+- `category`
+- `content`
+- `tags`
+- `source`
+- `author`
+- `confidence`
+- `summary`
+
+## `POST /api/users/{user_id}/knowledge/{item_id}/activate`
+
+显式激活某条知识的一个 revision。
+
+请求字段：
+
+- `revision_id`
+
+## `POST /api/users/{user_id}/knowledge/{item_id}/rollback`
+
+回滚到某条知识的历史 revision，并记录审计事件。
+
+请求字段：
+
+- `revision_id`
+
 ## `POST /api/journals`
 
 保存用户选择的一个方案，并生成复盘任务。
@@ -284,6 +353,7 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 ## 当前边界
 
 - 当前 journal 使用内存存储，服务重启后会丢失。
+- 当前 preference / knowledge store 使用内存存储，服务重启后会回到 demo seed；PostgreSQL 持久化和权限审批是后续项。
 - 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。

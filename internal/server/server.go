@@ -13,6 +13,7 @@ import (
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
+	"github.com/Super-Sky/athena-fund-assistant/internal/preference"
 )
 
 // Dependencies groups the app services used by HTTP handlers.
@@ -23,6 +24,7 @@ type Dependencies struct {
 	Journals      *journal.MemoryStore
 	Accounts      account.Store
 	Conversations conversation.Store
+	Preferences   preference.Store
 	Athena        athena.Client
 }
 
@@ -50,6 +52,12 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/conversations/{conversation_id}", s.handleConversationDetail)
 	mux.HandleFunc("POST /api/conversations/{conversation_id}/messages", s.handleAddConversationMessage)
 	mux.HandleFunc("POST /api/conversations/{conversation_id}/attachments", s.handleUploadConversationAttachment)
+	mux.HandleFunc("GET /api/users/{user_id}/knowledge", s.handleKnowledgeWorkspace)
+	mux.HandleFunc("POST /api/users/{user_id}/preferences/drafts", s.handlePreferenceDraft)
+	mux.HandleFunc("POST /api/users/{user_id}/preferences/activate", s.handlePreferenceActivate)
+	mux.HandleFunc("POST /api/users/{user_id}/knowledge/drafts", s.handleKnowledgeDraft)
+	mux.HandleFunc("POST /api/users/{user_id}/knowledge/{item_id}/activate", s.handleKnowledgeActivate)
+	mux.HandleFunc("POST /api/users/{user_id}/knowledge/{item_id}/rollback", s.handleKnowledgeRollback)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
 	mux.HandleFunc("GET /internal/tools/catalog", s.handleRemoteToolCatalog)
@@ -97,6 +105,10 @@ type addConversationMessageRequest struct {
 	Content       string   `json:"content"`
 	SkillID       string   `json:"skill_id"`
 	AttachmentIDs []string `json:"attachment_ids"`
+}
+
+type activateRevisionRequest struct {
+	RevisionID string `json:"revision_id"`
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -243,6 +255,109 @@ func (s *Server) handleUploadConversationAttachment(w http.ResponseWriter, r *ht
 		return
 	}
 	writeJSON(w, http.StatusCreated, attachment)
+}
+
+func (s *Server) handleKnowledgeWorkspace(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	workspace, err := s.deps.Preferences.Workspace(r.Context(), strings.TrimSpace(r.PathValue("user_id")))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, workspace)
+}
+
+func (s *Server) handlePreferenceDraft(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	var input preference.PreferenceInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	workspace, err := s.deps.Preferences.SavePreferenceDraft(r.Context(), strings.TrimSpace(r.PathValue("user_id")), input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, workspace)
+}
+
+func (s *Server) handlePreferenceActivate(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	var req activateRevisionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	workspace, err := s.deps.Preferences.ActivatePreference(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(req.RevisionID))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, workspace)
+}
+
+func (s *Server) handleKnowledgeDraft(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	var input preference.KnowledgeInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	workspace, err := s.deps.Preferences.SaveKnowledgeDraft(r.Context(), strings.TrimSpace(r.PathValue("user_id")), input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, workspace)
+}
+
+func (s *Server) handleKnowledgeActivate(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	var req activateRevisionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	workspace, err := s.deps.Preferences.ActivateKnowledge(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, workspace)
+}
+
+func (s *Server) handleKnowledgeRollback(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Preferences == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
+		return
+	}
+	var req activateRevisionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	workspace, err := s.deps.Preferences.RollbackKnowledge(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, workspace)
 }
 
 func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
