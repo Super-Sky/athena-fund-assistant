@@ -1,0 +1,71 @@
+services:
+  fake-openai:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["node", "/app/fake_openai_tool_model.js"]
+    environment:
+      FAKE_MODEL_PORT: "18083"
+    volumes:
+      - ./scripts/fake_openai_tool_model.js:/app/fake_openai_tool_model.js:ro
+    ports:
+      - "${ATHENA_FAKE_MODEL_PORT:-18083}:18083"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18083/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  athena-api:
+    build:
+      context: "${ATHENA_REPO:-../Athena-remote-tools}"
+      dockerfile: Dockerfile
+    environment:
+      HTTP_PORT: "8080"
+      SESSION_STORE_DRIVER: memory
+      MODEL_STORE_DRIVER: memory
+      CONTROL_PLANE_STORE_PATH: /app/config/controlplane/dual-compose.json
+      CONTROL_PLANE_ALLOWED_ORIGINS: "http://localhost:${ATHENA_FUND_WEB_PORT:-5173},http://127.0.0.1:${ATHENA_FUND_WEB_PORT:-5173}"
+      REMOTE_TOOL_ALLOWED_ORIGINS: "http://api:8081"
+      REMOTE_TOOL_MAX_RESPONSE_BYTES: "1048576"
+      OBSERVABILITY_LOG_LEVEL: info
+    ports:
+      - "${ATHENA_DUAL_API_PORT:-8080}:8080"
+    depends_on:
+      fake-openai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/athena", "healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - athena_dual_controlplane:/app/config/controlplane
+      - athena_dual_shared:/srv/shared
+
+  api:
+    environment:
+      ATHENA_BASE_URL: "http://athena-api:8080"
+      ATHENA_FUND_PROVIDER: "${ATHENA_FUND_PROVIDER:-csv}"
+      ATHENA_FUND_CSV_PATH: "${ATHENA_FUND_CSV_PATH:-/app/examples/market-data-sample.csv}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      athena-api:
+        condition: service_healthy
+
+  web:
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  athena_dual_controlplane:
+  athena_dual_shared:

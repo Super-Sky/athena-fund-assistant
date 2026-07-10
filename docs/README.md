@@ -32,6 +32,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - CSV 数据 provider、本地兜底边界、metadata 要求和验证证据中文说明。
 - `features/feature-csv-provider.en-US.md`
   - English description of the CSV data provider, local fallback boundary, metadata requirements, and verification evidence.
+- `features/feature-docker-compose.zh-CN.md`
+  - Docker Compose MVP 运行方式、双服务 overlay 和验证状态中文说明。
+- `features/feature-docker-compose.en-US.md`
+  - English description of the Docker Compose MVP runtime, dual-service overlay, and verification status.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`
