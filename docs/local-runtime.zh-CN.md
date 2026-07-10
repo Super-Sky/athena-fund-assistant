@@ -9,9 +9,9 @@
 - PostgreSQL
 - Redis
 
-当前 API 使用内存 journal 和 mock provider；账户看板在 `DATABASE_URL` 存在时使用 PostgreSQL，在未设置时回退到内存 demo store。Redis 已进入 Docker 拓扑，供后续缓存、速率限制和异步刷新接入。Athena client 未配置 `ATHENA_BASE_URL` 时使用本地 mock，配置后调用外部 Athena Agent Run API。
+当前 API 使用内存 journal，并默认使用 mock provider；账户看板在 `DATABASE_URL` 存在时使用 PostgreSQL，在未设置时回退到内存 demo store。Redis 已进入 Docker 拓扑，供后续缓存、速率限制和异步刷新接入。Athena client 未配置 `ATHENA_BASE_URL` 时使用本地 mock，配置后调用外部 Athena Agent Run API。
 
-API 启动前会先运行 provider validation。当前 mock provider 需要通过基金、个股、指数、USD/CNY 汇率和美股交易日历探针后才会开始监听端口。
+API 启动前会先运行 provider validation。当前 mock provider 需要通过基金、个股、指数、USD/CNY 汇率和美股交易日历探针后才会开始监听端口。CSV provider 需要同时通过中国 ETF / 指数、美股 ETF / 个股 / 指数、USD/CNY 汇率和中美交易日历探针。
 
 ## 直接运行 API
 
@@ -48,6 +48,17 @@ curl 'http://127.0.0.1:8081/internal/tools/catalog?base_url=http://127.0.0.1:808
 ```bash
 ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
 ```
+
+使用用户提供 CSV 数据兜底：
+
+```bash
+ATHENA_FUND_PROVIDER=csv \
+ATHENA_FUND_CSV_PATH=examples/market-data-sample.csv \
+ATHENA_FUND_API_ADDR=:8081 \
+go run ./cmd/api
+```
+
+CSV provider 是本地 MVP / 演示兜底，不是授权实时行情源。CSV 每行必须保留 `source`、`provider`、`fetched_at`、`market_time`、`timezone`、`delay`、`license_terms`、`confidence`、`schema_version`，样例文件使用 `user_supplied_csv_for_local_mvp_not_licensed_live_feed` 明确标记授权边界。
 
 ## 双服务 smoke
 
@@ -103,6 +114,7 @@ docker compose up --build
 
 - API 容器会读取 `DATABASE_URL` 并用于账户看板持久化；`REDIS_URL` 当前仍预留给后续缓存和异步任务。
 - API 会读取 `ATHENA_FUND_UPLOAD_DIR` 作为附件上传目录；未设置时使用系统临时目录。
+- API 会读取 `ATHENA_FUND_PROVIDER`；未设置或为 `mock` 时使用 `mock_provider`，为 `csv` 时读取 `ATHENA_FUND_CSV_PATH`。
 - API 会读取 `ATHENA_BASE_URL` 和可选 `ATHENA_AUTH_TOKEN`；未设置时使用 mock Athena client，便于单服务演示。
-- 当前 mock 数据必须在 UI / trace 中继续标记为临时数据。
+- 当前 mock / CSV 数据必须在 UI / trace 中继续标记为临时或用户提供数据。
 - 当前 Web 仍只调用 fund assistant API；fund assistant API 会在用户消息后通过 Athena client 发起 Agent Run，并通过 `/internal/tools/execute` 暴露只读 remote business tools 供 Athena 回调。

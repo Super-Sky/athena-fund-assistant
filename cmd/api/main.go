@@ -18,14 +18,8 @@ import (
 
 func main() {
 	addr := getenv("ATHENA_FUND_API_ADDR", ":8081")
-	provider := data.NewMockProvider()
-	report := data.ValidateProvider(context.Background(), provider, data.ValidationOptions{
-		FundCodes:     []string{"QQQ"},
-		EquitySymbols: []string{"AAPL"},
-		IndexCodes:    []string{"NDX"},
-		FXPairs:       []data.FXPair{{BaseCurrency: "USD", QuoteCurrency: "CNY"}},
-		Calendars:     []data.CalendarProbe{{Market: "US", Date: time.Now().UTC()}},
-	})
+	provider, validationOptions := loadProvider()
+	report := data.ValidateProvider(context.Background(), provider, validationOptions)
 	if !report.Passed {
 		log.Fatalf("data provider validation failed: %+v", report.Checks)
 	}
@@ -82,4 +76,39 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func loadProvider() (data.Provider, data.ValidationOptions) {
+	switch os.Getenv("ATHENA_FUND_PROVIDER") {
+	case "", "mock":
+		log.Printf("data provider using mock provider")
+		return data.NewMockProvider(), data.ValidationOptions{
+			FundCodes:     []string{"QQQ"},
+			EquitySymbols: []string{"AAPL"},
+			IndexCodes:    []string{"NDX"},
+			FXPairs:       []data.FXPair{{BaseCurrency: "USD", QuoteCurrency: "CNY"}},
+			Calendars:     []data.CalendarProbe{{Market: "US", Date: time.Now().UTC()}},
+		}
+	case "csv":
+		csvPath := os.Getenv("ATHENA_FUND_CSV_PATH")
+		provider, err := data.NewCSVProvider(csvPath)
+		if err != nil {
+			log.Fatalf("csv data provider initialization failed: %v", err)
+		}
+		log.Printf("data provider using user-supplied csv data from %s", csvPath)
+		probeDate := time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)
+		return provider, data.ValidationOptions{
+			FundCodes:     []string{"510300", "QQQ"},
+			EquitySymbols: []string{"AAPL"},
+			IndexCodes:    []string{"000300", "NDX"},
+			FXPairs:       []data.FXPair{{BaseCurrency: "USD", QuoteCurrency: "CNY"}},
+			Calendars: []data.CalendarProbe{
+				{Market: "CN", Date: probeDate},
+				{Market: "US", Date: probeDate},
+			},
+		}
+	default:
+		log.Fatalf("unsupported ATHENA_FUND_PROVIDER %q", os.Getenv("ATHENA_FUND_PROVIDER"))
+		return nil, data.ValidationOptions{}
+	}
 }

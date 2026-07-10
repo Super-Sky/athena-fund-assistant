@@ -11,7 +11,7 @@ This snapshot records the 2026-07-10 validation status for real data sources in 
 - FMP, Tiingo, and Nasdaq Data Link are better suited as optional user-key providers, not default free providers.
 - AKShare / Eastmoney / Tiantian Fund should remain experimental and local fallback only, not the default commercial SaaS provider.
 - Stooq historical CSV can remain a fallback candidate, but local validation hit a TLS connection failure; it must be revalidated in the target deployment network before it enters probes.
-- The default business provider must remain `mock_provider` or a future `csv_provider`, and must keep `mock_data_temporary` visible.
+- The default business provider must remain `mock_provider`, or the explicitly enabled local `csv_provider` fallback; both must keep temporary or user-supplied data markers visible.
 
 ## Local Probe Results
 
@@ -34,8 +34,15 @@ These failures are not product blockers; they are evidence that live providers h
 ### Default Workflow
 
 - Keep `mock_provider`.
-- Add `csv_provider` next as a no-network fallback candidate.
-- The default workflow must keep showing `license_terms`, `provider`, `source`, `confidence`, and `mock_data_temporary` in UI / API trace.
+- `csv_provider` is now wired into `internal/data.Provider` as a no-network fallback and is enabled explicitly through `ATHENA_FUND_PROVIDER=csv` plus `ATHENA_FUND_CSV_PATH`.
+- The default workflow must keep showing `license_terms`, `provider`, `source`, `confidence`, and temporary / user-supplied data markers in UI / API trace.
+
+### CSV Fallback
+
+- Coverage: normalized CSV rows can cover China ETF / index, US ETF / equity / index, USD/CNY FX, and China plus US market calendars.
+- Sample: `examples/market-data-sample.csv`.
+- Validation: before the API starts, `internal/data.ValidateProvider` checks `510300`, `QQQ`, `AAPL`, `000300`, `NDX`, `USD/CNY`, and `CN` / `US` market calendars.
+- Boundary: CSV data must be treated as user-supplied or local demo data, not as a licensed real-time market-data feed. `license_terms` must not be empty; the sample uses `user_supplied_csv_for_local_mvp_not_licensed_live_feed`.
 
 ### User-Key Workflow
 

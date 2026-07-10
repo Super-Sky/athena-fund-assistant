@@ -48,6 +48,8 @@
   - provider validation 报告和探针。
 - `internal/data/mock_provider.go`
   - 当前 mock provider，明确标记为临时数据。
+- `internal/data/csv_provider.go`
+  - 用户提供 CSV fallback provider，保留完整 metadata，并明确标记本地 MVP / 非授权实时行情边界。
 - `cmd/providerprobe`
   - 对真实数据源执行验证探针，输出 JSON validation report。
 - `internal/providerprobe`
@@ -59,9 +61,12 @@
 go run ./cmd/providerprobe --provider alpha_vantage
 ALPHA_VANTAGE_API_KEY=... go run ./cmd/providerprobe --provider alpha_vantage
 TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
+ATHENA_FUND_PROVIDER=csv ATHENA_FUND_CSV_PATH=examples/market-data-sample.csv go run ./cmd/api
 ```
 
 命令输出 JSON 报告。任何必需探针失败时，命令返回非零退出码。
+
+CSV provider 不替代真实 provider 准入；它只用于无 key、本地可验证、用户提供数据的 MVP 演示链路。CSV 行的 `license_terms`、`provider`、`source`、`market_time` 和 `timezone` 必须清晰，缺失 metadata 时加载失败。
 
 当前验证快照见：
 

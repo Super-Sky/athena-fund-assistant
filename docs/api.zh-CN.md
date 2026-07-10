@@ -14,7 +14,7 @@
 - API 允许本地 Web 开发源访问，当前 CORS 覆盖 `localhost` / `127.0.0.1` 的端口化 origin。
 - 未配置 `ATHENA_BASE_URL` 时使用本地 mock Athena client；配置后通过 `POST /api/agent/runs` 调用外部 Athena。
 - `ATHENA_AUTH_TOKEN` 可选，会作为 Bearer token 发给 Athena。
-- mock 数据必须在 trace 中显示 `mock_data_temporary=true`。
+- mock 数据必须在 trace 中显示 `mock_data_temporary=true`；mock / CSV 兜底数据必须在决策 trace 中显示 `temporary_data=true` 和明确的 `data_boundary`。
 - 金融输出必须包含多方案、依据、风险、反证条件和复盘时间。
 
 ## `GET /healthz`
@@ -260,6 +260,8 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `timezone`
 - `license_terms`
 - `confidence`
+- `data_boundary`
+- `temporary_data`
 - `rule_evaluations`
 - `governance_checks`
 - `mock_data_temporary`

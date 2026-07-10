@@ -91,6 +91,8 @@ type TraceSummary = {
   timezone: string;
   license_terms: string;
   confidence: number;
+  data_boundary: string;
+  temporary_data: boolean;
   rule_evaluations: string[] | null;
   governance_checks: string[] | null;
   athena_run_id?: string;
@@ -949,11 +951,12 @@ function SnapshotView({ analysis }: { analysis: AnalysisResponse }) {
           <TraceItem label="provider" value={trace.data_provider} />
           <TraceItem label="source" value={trace.data_source} />
           <TraceItem label="license" value={trace.license_terms} />
+          <TraceItem label="boundary" value={trace.data_boundary} />
           <TraceItem label="confidence" value={`${Math.round(trace.confidence * 100)}%`} />
           <TraceItem label="market time" value={formatDate(trace.market_time)} />
           <TraceItem label="fetched at" value={formatDate(trace.data_fetched_at)} />
           <TraceItem label="timezone" value={trace.timezone} />
-          <TraceItem label="mock" value={trace.mock_data_temporary ? "temporary" : "false"} />
+          <TraceItem label="temporary" value={trace.temporary_data ? "true" : "false"} />
         </dl>
       </div>
     </section>
