@@ -266,6 +266,75 @@ Response fields:
 - `governance_checks`
 - `mock_data_temporary`
 
+## `GET /api/users/{user_id}/knowledge`
+
+Reads durable user preferences, `agent.md`, the strategy knowledge base, revision history, and audit events.
+
+Response fields:
+
+- `preference`: user risk preference, communication preference, default strategy level, preferred / blocked assets, review frequency, `agent_md`, active revision, and governance fields.
+- `items`: strategy knowledge items with title, category, content, tags, status, active revision, source, author, confidence, schema_version, and governance decision.
+- `revisions`: immutable preference or knowledge item revisions.
+- `audit`: audit events for draft saves, activations, rollbacks, and related actions.
+
+## `POST /api/users/{user_id}/preferences/drafts`
+
+Saves a user preference / `agent.md` draft without activating it.
+
+Request fields:
+
+- `risk_preference`
+- `communication_style`
+- `default_strategy_level`
+- `preferred_assets`
+- `blocked_assets`
+- `review_frequency_days`
+- `agent_md`
+- `source`
+- `author`
+- `confidence`
+- `summary`
+
+## `POST /api/users/{user_id}/preferences/activate`
+
+Explicitly activates one preference revision.
+
+Request fields:
+
+- `revision_id`
+
+## `POST /api/users/{user_id}/knowledge/drafts`
+
+Saves one strategy knowledge draft without activating it.
+
+Request fields:
+
+- `item_id`: optional; when omitted the API creates a new item.
+- `title`
+- `category`
+- `content`
+- `tags`
+- `source`
+- `author`
+- `confidence`
+- `summary`
+
+## `POST /api/users/{user_id}/knowledge/{item_id}/activate`
+
+Explicitly activates one revision for a knowledge item.
+
+Request fields:
+
+- `revision_id`
+
+## `POST /api/users/{user_id}/knowledge/{item_id}/rollback`
+
+Rolls back a knowledge item to a historical revision and records an audit event.
+
+Request fields:
+
+- `revision_id`
+
 ## `POST /api/journals`
 
 Stores the option selected by the user and creates a review task.
@@ -284,6 +353,7 @@ Response fields:
 ## Current Boundaries
 
 - The journal store is in-memory and is lost on service restart.
+- The preference / knowledge store is in-memory and returns to the demo seed on service restart. PostgreSQL persistence and permissioned approval are follow-up work.
 - The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.

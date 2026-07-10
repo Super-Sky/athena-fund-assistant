@@ -36,6 +36,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - Docker Compose MVP 运行方式、双服务 overlay 和验证状态中文说明。
 - `features/feature-docker-compose.en-US.md`
   - English description of the Docker Compose MVP runtime, dual-service overlay, and verification status.
+- `features/feature-preference-knowledge.zh-CN.md`
+  - 用户偏好、agent.md、策略知识库、版本和治理边界中文说明。
+- `features/feature-preference-knowledge.en-US.md`
+  - English description of user preferences, agent.md, strategy knowledge base, revisions, and governance boundaries.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`
