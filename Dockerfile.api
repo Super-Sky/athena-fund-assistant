@@ -10,9 +10,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/athena-fund-api ./cmd/api
 FROM alpine:3.20
 
 RUN adduser -D -g '' appuser
-USER appuser
+WORKDIR /app
 
 COPY --from=build /out/athena-fund-api /usr/local/bin/athena-fund-api
+COPY examples /app/examples
+
+USER appuser
 
 ENV ATHENA_FUND_API_ADDR=:8081
 EXPOSE 8081
