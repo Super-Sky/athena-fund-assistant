@@ -48,6 +48,8 @@ Forbidden order:
   - Provider validation report and probes.
 - `internal/data/mock_provider.go`
   - Current mock provider, explicitly marked as temporary data.
+- `internal/data/csv_provider.go`
+  - User-supplied CSV fallback provider that preserves full metadata and explicitly marks the local MVP / non-licensed real-time feed boundary.
 - `cmd/providerprobe`
   - Runs validation probes against real data sources and emits JSON validation reports.
 - `internal/providerprobe`
@@ -59,9 +61,12 @@ Forbidden order:
 go run ./cmd/providerprobe --provider alpha_vantage
 ALPHA_VANTAGE_API_KEY=... go run ./cmd/providerprobe --provider alpha_vantage
 TUSHARE_TOKEN=... go run ./cmd/providerprobe --provider tushare
+ATHENA_FUND_PROVIDER=csv ATHENA_FUND_CSV_PATH=examples/market-data-sample.csv go run ./cmd/api
 ```
 
 The command emits a JSON report. It exits non-zero when any required probe fails.
+
+The CSV provider does not replace real-provider admission. It is only for no-key, locally verifiable MVP demo workflows backed by user-supplied data. CSV rows must have clear `license_terms`, `provider`, `source`, `market_time`, and `timezone`; loading fails when required metadata is missing.
 
 Current validation snapshots:
 

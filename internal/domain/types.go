@@ -403,6 +403,8 @@ type TraceSummary struct {
 	Timezone          string   `json:"timezone"`
 	LicenseTerms      string   `json:"license_terms"`
 	Confidence        float64  `json:"confidence"`
+	DataBoundary      string   `json:"data_boundary"`
+	TemporaryData     bool     `json:"temporary_data"`
 	RuleEvaluations   []string `json:"rule_evaluations"`
 	GovernanceChecks  []string `json:"governance_checks"`
 	AthenaRunID       string   `json:"athena_run_id,omitempty"`

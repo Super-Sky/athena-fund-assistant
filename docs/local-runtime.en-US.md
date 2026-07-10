@@ -9,9 +9,9 @@ This document records the current local runtime path for the athena-fund-assista
 - PostgreSQL
 - Redis
 
-The API still uses the in-memory journal store and mock provider. The account dashboard uses PostgreSQL when `DATABASE_URL` exists and falls back to the in-memory demo store otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
+The API still uses the in-memory journal store and defaults to the mock provider. The account dashboard uses PostgreSQL when `DATABASE_URL` exists and falls back to the in-memory demo store otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
 
-The API runs provider validation before listening. The current mock provider must pass fund, equity, index, USD/CNY FX, and US market-calendar probes before the server starts.
+The API runs provider validation before listening. The current mock provider must pass fund, equity, index, USD/CNY FX, and US market-calendar probes before the server starts. The CSV provider must pass China ETF / index, US ETF / equity / index, USD/CNY FX, and China plus US market-calendar probes.
 
 ## Run The API Directly
 
@@ -48,6 +48,17 @@ Connect real Athena:
 ```bash
 ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
 ```
+
+Use user-supplied CSV data as the fallback provider:
+
+```bash
+ATHENA_FUND_PROVIDER=csv \
+ATHENA_FUND_CSV_PATH=examples/market-data-sample.csv \
+ATHENA_FUND_API_ADDR=:8081 \
+go run ./cmd/api
+```
+
+The CSV provider is a local MVP / demo fallback, not a licensed real-time market-data feed. Every CSV row must preserve `source`, `provider`, `fetched_at`, `market_time`, `timezone`, `delay`, `license_terms`, `confidence`, and `schema_version`. The sample file uses `user_supplied_csv_for_local_mvp_not_licensed_live_feed` to make the license boundary explicit.
 
 ## Dual-Service Smoke
 
@@ -103,6 +114,7 @@ Default ports:
 
 - The API container reads `DATABASE_URL` for account dashboard persistence. `REDIS_URL` remains reserved for later caching and async work.
 - The API reads `ATHENA_FUND_UPLOAD_DIR` as the attachment upload directory. If unset, the system temp directory is used.
+- The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, while `csv` reads `ATHENA_FUND_CSV_PATH`.
 - The API reads `ATHENA_BASE_URL` and optional `ATHENA_AUTH_TOKEN`; when unset, it uses the mock Athena client for single-service demos.
-- Mock data must continue to be marked as temporary in UI / trace output.
+- Mock / CSV data must continue to be marked as temporary or user-supplied in UI / trace output.
 - The current web app still calls only the fund assistant API. The fund assistant API starts an Agent Run through the Athena client after user messages and exposes read-only remote business tools through `/internal/tools/execute` for Athena callbacks.

@@ -28,6 +28,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - Agent 对话工作台、skill 选择、附件上传和 trace timeline 的中文说明。
 - `features/feature-agent-workspace.en-US.md`
   - English description for the Agent workspace, skill selection, attachment upload, and trace timeline.
+- `features/feature-csv-provider.zh-CN.md`
+  - CSV 数据 provider、本地兜底边界、metadata 要求和验证证据中文说明。
+- `features/feature-csv-provider.en-US.md`
+  - English description of the CSV data provider, local fallback boundary, metadata requirements, and verification evidence.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`

@@ -49,6 +49,9 @@ func TestEngineGeneratesTraceableThreeOptionMatrix(t *testing.T) {
 	if !matrix.Trace.MockDataTemporary {
 		t.Fatal("expected mock data to be explicitly marked")
 	}
+	if !matrix.Trace.TemporaryData || matrix.Trace.DataBoundary == "" {
+		t.Fatalf("expected generic temporary data boundary, got %#v", matrix.Trace)
+	}
 	for _, option := range matrix.Options {
 		if len(option.StrategyBasis) == 0 {
 			t.Fatalf("option %s missing strategy basis", option.ID)

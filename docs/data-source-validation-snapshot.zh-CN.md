@@ -11,7 +11,7 @@
 - FMP、Tiingo、Nasdaq Data Link 适合作为可选用户 key provider，不作为默认免费 provider。
 - AKShare / Eastmoney / 天天基金路径只作为实验和本地 fallback，不作为商业 SaaS 默认 provider。
 - Stooq 历史 CSV 可作为候选 fallback，但本机验证遇到 TLS 连接失败；需要在目标部署网络重新验证后才能进入 probe。
-- 当前默认业务 provider 仍必须是 `mock_provider` 或未来 `csv_provider`，并继续明确标记 `mock_data_temporary`。
+- 当前默认业务 provider 仍必须是 `mock_provider`，或显式启用的 `csv_provider` 本地兜底；两者都必须继续明确标记临时或用户提供数据。
 
 ## 本机 probe 结果
 
@@ -34,8 +34,15 @@ go run ./cmd/providerprobe --provider tushare
 ### 默认链路
 
 - 保留 `mock_provider`。
-- 增加 `csv_provider` 作为下一步无网络 fallback 候选。
-- 默认链路必须在 UI / API trace 中展示 `license_terms`、`provider`、`source`、`confidence` 和 `mock_data_temporary`。
+- `csv_provider` 已作为无网络 fallback 接入 `internal/data.Provider`，通过 `ATHENA_FUND_PROVIDER=csv` 和 `ATHENA_FUND_CSV_PATH` 显式启用。
+- 默认链路必须在 UI / API trace 中展示 `license_terms`、`provider`、`source`、`confidence` 和临时 / 用户提供数据标记。
+
+### CSV fallback
+
+- 覆盖：标准化 CSV 行可覆盖中国 ETF / 指数、美股 ETF / 个股 / 指数、USD/CNY 汇率和中美交易日历。
+- 样例：`examples/market-data-sample.csv`。
+- 验证：启动 API 前会用 `internal/data.ValidateProvider` 检查 `510300`、`QQQ`、`AAPL`、`000300`、`NDX`、`USD/CNY`、`CN` / `US` 交易日历。
+- 边界：CSV 数据必须视为用户提供或本地演示数据，不是授权实时行情源；`license_terms` 不得为空，样例值为 `user_supplied_csv_for_local_mvp_not_licensed_live_feed`。
 
 ### 用户 key 链路
 

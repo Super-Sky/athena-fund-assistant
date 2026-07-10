@@ -49,7 +49,7 @@ func (e *Engine) Generate(profile domain.InvestorProfile, portfolio domain.Portf
 			"no_auto_trading",
 			"multi_option_output",
 			"percentage_from_profile_and_portfolio_rules",
-			"mock_data_marked",
+			"data_boundary_marked",
 		},
 		Trace: domain.TraceSummary{
 			DataProvider:      snapshot.Metadata.Provider,
@@ -59,6 +59,8 @@ func (e *Engine) Generate(profile domain.InvestorProfile, portfolio domain.Portf
 			Timezone:          snapshot.Metadata.Timezone,
 			LicenseTerms:      snapshot.Metadata.LicenseTerms,
 			Confidence:        snapshot.Metadata.Confidence,
+			DataBoundary:      dataBoundary(snapshot.Metadata.Provider),
+			TemporaryData:     temporaryData(snapshot.Metadata.Provider),
 			RuleEvaluations:   ruleEvaluations(profile, holding, snapshot),
 			GovernanceChecks:  []string{"blocked_single_absolute_conclusion", "included_risks", "included_invalidation", "included_review_timing"},
 			MockDataTemporary: snapshot.Metadata.Provider == "mock_provider",
@@ -83,6 +85,9 @@ func diagnose(profile domain.InvestorProfile, holding domain.PortfolioHolding, s
 	}
 	if snapshot.Metadata.Provider == "mock_provider" {
 		warnings = append(warnings, "mock data is temporary and must not be treated as production market data")
+	}
+	if snapshot.Metadata.Provider == "csv_provider" {
+		warnings = append(warnings, "csv data is user-supplied and must not be treated as a licensed real-time market feed")
 	}
 
 	evidence = append(evidence,
@@ -159,7 +164,7 @@ func buildOptions(profile domain.InvestorProfile, holding domain.PortfolioHoldin
 			Invalidation:        "if the instrument breaches the user's max drawdown or allocation limit again",
 			ReviewAfterDays:     7,
 			PortfolioImpact:     fmt.Sprintf("target allocation moves from %.1f%% to %.1f%%", holding.AllocationPct, clamp(holding.AllocationPct+balancedChange, 0, 100)),
-			StrategyBasis:       []string{"mock_data_confidence", "portfolio.current_allocation_pct", "decision_template.balanced_review"},
+			StrategyBasis:       []string{"data_source_confidence", "portfolio.current_allocation_pct", "decision_template.balanced_review"},
 		},
 		{
 			ID:                  "option_aggressive",
@@ -175,6 +180,21 @@ func buildOptions(profile domain.InvestorProfile, holding domain.PortfolioHoldin
 			StrategyBasis:       []string{"profile.risk_preference", "profile.single_instrument_max_allocation_pct", "snapshot.one_year_return_pct"},
 		},
 	}
+}
+
+func dataBoundary(provider string) string {
+	switch provider {
+	case "mock_provider":
+		return "mock_data_temporary_not_for_production"
+	case "csv_provider":
+		return "user_supplied_csv_for_local_mvp_not_licensed_live_feed"
+	default:
+		return "provider_terms_required"
+	}
+}
+
+func temporaryData(provider string) bool {
+	return provider == "mock_provider" || provider == "csv_provider"
 }
 
 func ruleEvaluations(profile domain.InvestorProfile, holding domain.PortfolioHolding, snapshot domain.FundSnapshot) []string {

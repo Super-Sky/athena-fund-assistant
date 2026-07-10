@@ -14,7 +14,7 @@ This API belongs to the fund assistant business application layer, not Athena co
 - The API allows local web-development origins; current CORS support covers port-qualified `localhost` / `127.0.0.1` origins.
 - When `ATHENA_BASE_URL` is unset, the service uses a local mock Athena client; when configured, it calls external Athena through `POST /api/agent/runs`.
 - `ATHENA_AUTH_TOKEN` is optional and is sent to Athena as a Bearer token.
-- Mock data must surface `mock_data_temporary=true` in trace output.
+- Mock data must surface `mock_data_temporary=true` in trace output. Mock / CSV fallback data must surface `temporary_data=true` and an explicit `data_boundary` in decision traces.
 - Financial output must include multiple options, evidence, risks, invalidation conditions, and review timing.
 
 ## `GET /healthz`
@@ -260,6 +260,8 @@ Response fields:
 - `timezone`
 - `license_terms`
 - `confidence`
+- `data_boundary`
+- `temporary_data`
 - `rule_evaluations`
 - `governance_checks`
 - `mock_data_temporary`
