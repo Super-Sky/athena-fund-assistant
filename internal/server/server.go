@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -21,7 +22,7 @@ import (
 type Dependencies struct {
 	Provider      data.Provider
 	DecisionMaker *decision.Engine
-	Journals      *journal.MemoryStore
+	Journals      journal.Store
 	Accounts      account.Store
 	Conversations conversation.Store
 	Preferences   preference.Store
@@ -45,6 +46,7 @@ func New(deps Dependencies) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.HandleFunc("GET /readyz", s.handleReady)
 	mux.HandleFunc("GET /api/accounts/{user_id}/overview", s.handleAccountOverview)
 	mux.HandleFunc("POST /api/accounts/{user_id}/holdings", s.handleReplaceAccountHoldings)
 	mux.HandleFunc("GET /api/conversations/skills", s.handleConversationSkills)
@@ -60,6 +62,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/users/{user_id}/knowledge/{item_id}/rollback", s.handleKnowledgeRollback)
 	mux.HandleFunc("POST /api/analysis/fund", s.handleFundAnalysis)
 	mux.HandleFunc("POST /api/journals", s.handleCreateJournal)
+	mux.HandleFunc("GET /api/journals/{journal_id}", s.handleJournal)
+	mux.HandleFunc("GET /api/reviews/{review_id}", s.handleReview)
 	mux.HandleFunc("GET /internal/tools/catalog", s.handleRemoteToolCatalog)
 	mux.HandleFunc("POST /internal/tools/execute", s.handleRemoteToolExecution)
 	return withCORS(withJSON(mux))
@@ -113,6 +117,18 @@ type activateRevisionRequest struct {
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Journals == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
+		return
+	}
+	if err := s.deps.Journals.Ping(r.Context()); err != nil {
+		writeError(w, http.StatusServiceUnavailable, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 func (s *Server) handleAccountOverview(w http.ResponseWriter, r *http.Request) {
@@ -392,17 +408,55 @@ func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateJournal(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Journals == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
+		return
+	}
 	var req journalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	entry, review, err := s.deps.Journals.Create(req.Matrix, req.SelectedOptionID, req.UserNotes)
+	entry, review, err := s.deps.Journals.Create(r.Context(), req.Matrix, req.SelectedOptionID, req.UserNotes)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, journalResponse{Journal: entry, Review: review})
+}
+
+func (s *Server) handleJournal(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Journals == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
+		return
+	}
+	entry, err := s.deps.Journals.Entry(r.Context(), strings.TrimSpace(r.PathValue("journal_id")))
+	if err != nil {
+		if errors.Is(err, journal.ErrEntryNotFound) {
+			writeError(w, http.StatusNotFound, err)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, entry)
+}
+
+func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
+	if s.deps.Journals == nil {
+		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
+		return
+	}
+	review, err := s.deps.Journals.Review(r.Context(), strings.TrimSpace(r.PathValue("review_id")))
+	if err != nil {
+		if errors.Is(err, journal.ErrReviewNotFound) {
+			writeError(w, http.StatusNotFound, err)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, review)
 }
 
 type errText string
@@ -426,7 +480,7 @@ func withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		}
-		if r.Method == http.MethodOptions && (strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz") {
+		if r.Method == http.MethodOptions && (strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz" || r.URL.Path == "/readyz") {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

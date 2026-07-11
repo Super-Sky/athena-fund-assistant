@@ -24,6 +24,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 账户收益看板第一片的中文说明、边界和后续持久化计划。
 - `features/feature-account-dashboard.en-US.md`
   - English description, boundaries, and persistence follow-up plan for the first account dashboard slice.
+- `features/feature-journal-persistence.zh-CN.md`
+  - 决策日志与复盘任务 PostgreSQL 持久化、证据快照和运行边界中文说明。
+- `features/feature-journal-persistence.en-US.md`
+  - English description of PostgreSQL-backed decision journals, review tasks, evidence snapshots, and runtime boundaries.
 - `features/feature-agent-workspace.zh-CN.md`
   - Agent 对话工作台、skill 选择、附件上传和 trace timeline 的中文说明。
 - `features/feature-agent-workspace.en-US.md`
