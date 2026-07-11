@@ -26,6 +26,7 @@ func main() {
 	}
 	log.Printf("data provider validation passed with %d checks", len(report.Checks))
 	var accountStore account.Store = account.NewMemoryStore()
+	var journalStore journal.Store = journal.NewMemoryStore()
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		postgresStore, err := account.NewPostgresStore(context.Background(), databaseURL)
 		if err != nil {
@@ -38,8 +39,20 @@ func main() {
 		}()
 		accountStore = postgresStore
 		log.Printf("account store using PostgreSQL")
+		postgresJournalStore, err := journal.NewPostgresStore(context.Background(), databaseURL)
+		if err != nil {
+			log.Fatalf("postgres journal store initialization failed: %v", err)
+		}
+		defer func() {
+			if err := postgresJournalStore.Close(context.Background()); err != nil {
+				log.Printf("postgres journal store close failed: %v", err)
+			}
+		}()
+		journalStore = postgresJournalStore
+		log.Printf("journal store using PostgreSQL")
 	} else {
 		log.Printf("account store using in-memory demo data")
+		log.Printf("journal store using non-durable in-memory demo data")
 	}
 	conversationStore, err := conversation.NewMemoryStore(getenv("ATHENA_FUND_UPLOAD_DIR", ""))
 	if err != nil {
@@ -60,7 +73,7 @@ func main() {
 	svc := server.New(server.Dependencies{
 		Provider:      provider,
 		DecisionMaker: decision.NewEngine(),
-		Journals:      journal.NewMemoryStore(),
+		Journals:      journalStore,
 		Accounts:      accountStore,
 		Conversations: conversationStore,
 		Preferences:   preference.NewMemoryStore(),

@@ -9,7 +9,7 @@ This document records the current local runtime path for the athena-fund-assista
 - PostgreSQL
 - Redis
 
-The API still uses the in-memory journal store and defaults to the mock provider. The account dashboard uses PostgreSQL when `DATABASE_URL` exists and falls back to the in-memory demo store otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
+The API defaults to the mock provider. The account dashboard and decision journal use PostgreSQL when `DATABASE_URL` exists and fall back to explicit in-memory demo stores otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
 
 The API runs provider validation before listening. The current mock provider must pass fund, equity, index, USD/CNY FX, and US market-calendar probes before the server starts. The CSV provider must pass China ETF / index, US ETF / equity / index, USD/CNY FX, and China plus US market-calendar probes.
 
@@ -23,6 +23,12 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8081/healthz
+```
+
+Persistence readiness check:
+
+```bash
+curl http://127.0.0.1:8081/readyz
 ```
 
 Account dashboard check:
@@ -83,7 +89,7 @@ PostgreSQL store integration test:
 
 ```bash
 ATHENA_FUND_PG_TEST_DSN='postgres://athena_fund:athena_fund@127.0.0.1:5433/athena_fund?sslmode=disable' \
-  go test ./internal/account -run TestPostgresStoreOverviewAndReplaceHoldings -count=1
+  go test ./internal/account ./internal/journal -run 'Test(PostgresStoreOverviewAndReplaceHoldings|PostgresStorePersistence)' -count=1
 ```
 
 ## Run The Web App Directly
@@ -138,7 +144,7 @@ The script builds and starts the dual-service Docker topology, registers the fak
 
 ## Current Boundaries
 
-- The API container reads `DATABASE_URL` for account dashboard persistence. `REDIS_URL` remains reserved for later caching and async work.
+- The API container reads `DATABASE_URL` for account-dashboard and journal/review persistence. `REDIS_URL` remains reserved for later caching and async work.
 - The API reads `ATHENA_FUND_UPLOAD_DIR` as the attachment upload directory. If unset, the system temp directory is used.
 - The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, while `csv` reads `ATHENA_FUND_CSV_PATH`.
 - The API reads `ATHENA_BASE_URL` and optional `ATHENA_AUTH_TOKEN`; when unset, it uses the mock Athena client for single-service demos.

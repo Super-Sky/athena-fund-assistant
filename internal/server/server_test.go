@@ -87,6 +87,18 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 	if journalResp.Review.Status != "open" {
 		t.Fatalf("unexpected review status %s", journalResp.Review.Status)
 	}
+	journalRead := performJSON(t, srv, http.MethodGet, "/api/journals/"+journalResp.Journal.ID, nil)
+	if journalRead.Code != http.StatusOK || !bytes.Contains(journalRead.Body.Bytes(), []byte(journalResp.Journal.ID)) {
+		t.Fatalf("journal read status=%d body=%s", journalRead.Code, journalRead.Body.String())
+	}
+	reviewRead := performJSON(t, srv, http.MethodGet, "/api/reviews/"+journalResp.Review.ID, nil)
+	if reviewRead.Code != http.StatusOK || !bytes.Contains(reviewRead.Body.Bytes(), []byte(journalResp.Review.ID)) {
+		t.Fatalf("review read status=%d body=%s", reviewRead.Code, reviewRead.Body.String())
+	}
+	ready := performJSON(t, srv, http.MethodGet, "/readyz", nil)
+	if ready.Code != http.StatusOK {
+		t.Fatalf("ready status=%d body=%s", ready.Code, ready.Body.String())
+	}
 }
 
 func TestCORSPreflightForLocalWeb(t *testing.T) {
@@ -469,7 +481,16 @@ func TestPreferenceKnowledgeWorkflow(t *testing.T) {
 	if err := json.Unmarshal(draftRR.Body.Bytes(), &drafted); err != nil {
 		t.Fatalf("decode draft: %v", err)
 	}
-	item := drafted.Items[len(drafted.Items)-1]
+	var item domain.KnowledgeItem
+	for _, candidate := range drafted.Items {
+		if candidate.Title == "Volatility review rule" {
+			item = candidate
+			break
+		}
+	}
+	if item.ID == "" {
+		t.Fatalf("draft item not found: %#v", drafted.Items)
+	}
 	revision := drafted.Revisions[len(drafted.Revisions)-1]
 	if item.Status != domain.KnowledgeDraft || revision.Status != domain.KnowledgeDraft {
 		t.Fatalf("expected draft item and revision, got item=%s revision=%s", item.Status, revision.Status)

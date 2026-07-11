@@ -59,9 +59,9 @@ This repository now contains the first local Go API slice for the fund assistant
 - Athena remote business tool callbacks for read-only account and market data
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
-- in-memory decision journal and review task
+- durable decision journal and review task when `DATABASE_URL` is configured
 
-The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard uses PostgreSQL when `DATABASE_URL` is configured and falls back to an in-memory demo user otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client, read-only remote business tools, and a dual-service smoke path. Journal/review persistence and real data providers remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard and decision journal use PostgreSQL when `DATABASE_URL` is configured and fall back to explicit in-memory demo stores otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client, read-only remote business tools, and a dual-service smoke path. Real data providers and persistent preference/knowledge storage remain active MVP work.
 
 ## Local Run
 

@@ -29,7 +29,7 @@ This feature moves the fund assistant from a one-off fund analysis page toward a
 
 ## Follow-Up
 
-- Move journal/review from memory storage to persistent storage and link them to accounts/holdings.
+- Link the already persistent journal/review records to accounts and holdings.
 - Connect account holdings to real data providers and replace mock/demo prices and FX.
 - Integrate with Athena remote tools so the Agent can read account overview and write decision journals.
 

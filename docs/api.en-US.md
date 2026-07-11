@@ -29,6 +29,10 @@ Response example:
 }
 ```
 
+## `GET /readyz`
+
+Checks that the journal persistence boundary can accept work. It returns `503` when the configured store is unavailable; Docker Compose uses it for API readiness.
+
 ## `GET /api/accounts/{user_id}/overview`
 
 Reads the user's account performance dashboard.
@@ -350,11 +354,20 @@ Response fields:
 - `journal`
 - `review`
 
+The matrix is stored as an immutable evidence snapshot. With `DATABASE_URL`, the journal entry and review task are created in one PostgreSQL transaction and survive an API restart. Without it, the local fallback is intentionally non-durable.
+
+## `GET /api/journals/{journal_id}`
+
+Returns the immutable decision journal snapshot by ID, or `404` when it does not exist.
+
+## `GET /api/reviews/{review_id}`
+
+Returns the generated review task by ID, or `404` when it does not exist.
+
 ## Current Boundaries
 
-- The journal store is in-memory and is lost on service restart.
 - The preference / knowledge store is in-memory and returns to the demo seed on service restart. PostgreSQL persistence and permissioned approval are follow-up work.
 - The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
 - The current data provider is a mock provider and must not be treated as production market data.
 - The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
-- Redis, Athena agent-run integration, attachment parsers/OCR/PDF/CSV parsing, persistent journal/review account links, and real providers are later implementation items.
+- Redis, attachment parsers/OCR/PDF/CSV parsing, persistent journal/review account links, and real providers are later implementation items.

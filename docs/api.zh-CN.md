@@ -29,6 +29,10 @@
 }
 ```
 
+## `GET /readyz`
+
+检查 journal 持久化边界是否可接受请求。配置的 store 不可用时返回 `503`；Docker Compose 使用它判断 API 是否就绪。
+
 ## `GET /api/accounts/{user_id}/overview`
 
 读取用户账户收益看板。
@@ -350,11 +354,20 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `journal`
 - `review`
 
+系统会把 matrix 保存为不可变的证据快照。设置 `DATABASE_URL` 时，journal 和 review task 会在一个 PostgreSQL 事务中创建，并可跨 API 重启读取；未设置时明确使用非持久化本地 fallback。
+
+## `GET /api/journals/{journal_id}`
+
+按 ID 返回不可变决策日志快照；不存在时返回 `404`。
+
+## `GET /api/reviews/{review_id}`
+
+按 ID 返回生成的复盘任务；不存在时返回 `404`。
+
 ## 当前边界
 
-- 当前 journal 使用内存存储，服务重启后会丢失。
 - 当前 preference / knowledge store 使用内存存储，服务重启后会回到 demo seed；PostgreSQL 持久化和权限审批是后续项。
 - 当前 account overview 在 `DATABASE_URL` 存在时使用 PostgreSQL 持久化；未设置时使用内存 demo store。
 - 当前 data provider 是 mock provider，不能作为生产行情。
 - 当前 API 不做用户认证、资金托管、自动交易或券商下单。
-- Redis、Athena agent run 对接、附件解析/OCR/PDF/CSV parser、journal/review 持久化关联和真实 provider 是后续实现项。
+- Redis、附件解析/OCR/PDF/CSV parser、journal/review 与账户的持久化关联和真实 provider 是后续实现项。
