@@ -51,6 +51,7 @@ services:
   api:
     environment:
       ATHENA_BASE_URL: "http://athena-api:8080"
+      ATHENA_AUTH_TOKEN: "${ATHENA_AUTH_TOKEN:-}"
       ATHENA_FUND_PROVIDER: "${ATHENA_FUND_PROVIDER:-csv}"
       ATHENA_FUND_CSV_PATH: "${ATHENA_FUND_CSV_PATH:-/app/examples/market-data-sample.csv}"
     depends_on:

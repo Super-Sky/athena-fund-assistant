@@ -13,10 +13,11 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
   - Builds the React + TypeScript + Vite frontend and serves it through Nginx with API proxying.
 - `docker-compose.yml`
   - Starts the fund assistant web app, API, PostgreSQL, and Redis.
-  - Wires runtime dependencies through `DATABASE_URL`, `REDIS_URL`, and `ATHENA_BASE_URL`.
+  - Wires runtime dependencies through `DATABASE_URL`, `REDIS_URL`, `ATHENA_BASE_URL`, and optional `ATHENA_AUTH_TOKEN`.
 - `docker-compose.dual.yml`
   - Adds Athena API, a fake OpenAI-compatible model, and dual-service network configuration.
   - Points the fund assistant API at container-local Athena: `http://athena-api:8080`.
+  - Forwards optional `ATHENA_AUTH_TOKEN` when Athena enables authentication middleware.
   - Enables the CSV provider by default so the dual-service demo does not require third-party market-data keys.
 - `scripts/fake_openai_tool_model.js`
   - Provides the OpenAI-compatible tool-call model double used by Docker smoke.
@@ -31,6 +32,7 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - The fake model is only for smoke tests and does not represent real model quality.
 - The CSV provider is only a local fallback and must not masquerade as licensed real-time market data.
 - Payment, subscriptions, brokerage account integration, and automatic trading are out of scope.
+- Tokens do not belong in versioned content beyond the empty `.env.example` placeholder and never enter conversation traces.
 
 ## Verification
 

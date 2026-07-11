@@ -132,7 +132,7 @@ docker compose -f docker-compose.yml -f docker-compose.dual.yml up --build
 - fund assistant API: `8081`
 - fake OpenAI-compatible 模型: `18083`
 
-双服务 overlay 会把 fund assistant API 的 `ATHENA_BASE_URL` 设置为 `http://athena-api:8080`，并默认启用 CSV provider：`ATHENA_FUND_PROVIDER=csv`、`ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`。CSV 数据仍是本地 MVP / 演示兜底，不是授权实时行情源。
+双服务 overlay 会把 fund assistant API 的 `ATHENA_BASE_URL` 设置为 `http://athena-api:8080`，并转发可选的 `ATHENA_AUTH_TOKEN`；默认启用 CSV provider：`ATHENA_FUND_PROVIDER=csv`、`ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`。CSV 数据仍是本地 MVP / 演示兜底，不是授权实时行情源。不要把 token 写入版本库。
 
 端到端 Docker smoke：
 

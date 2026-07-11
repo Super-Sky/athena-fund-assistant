@@ -132,7 +132,7 @@ Default ports:
 - fund assistant API: `8081`
 - fake OpenAI-compatible model: `18083`
 
-The dual-service overlay points the fund assistant API at `ATHENA_BASE_URL=http://athena-api:8080` and enables the CSV provider by default with `ATHENA_FUND_PROVIDER=csv` plus `ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`. CSV data remains a local MVP / demo fallback, not a licensed real-time market-data feed.
+The dual-service overlay points the fund assistant API at `ATHENA_BASE_URL=http://athena-api:8080`, forwards optional `ATHENA_AUTH_TOKEN`, and enables the CSV provider by default with `ATHENA_FUND_PROVIDER=csv` plus `ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`. CSV data remains a local MVP / demo fallback, not a licensed real-time market-data feed. Never commit the token.
 
 End-to-end Docker smoke:
 
