@@ -13,10 +13,11 @@
   - 构建 React + TypeScript + Vite 前端，并用 Nginx 提供静态资源和 API 代理。
 - `docker-compose.yml`
   - 启动 fund assistant Web、API、PostgreSQL 和 Redis。
-  - 通过 `DATABASE_URL`、`REDIS_URL`、`ATHENA_BASE_URL` 配置运行时依赖。
+  - 通过 `DATABASE_URL`、`REDIS_URL`、`ATHENA_BASE_URL` 和可选 `ATHENA_AUTH_TOKEN` 配置运行时依赖。
 - `docker-compose.dual.yml`
   - 增加 Athena API、fake OpenAI-compatible 模型和双服务网络配置。
   - 将 fund assistant API 指向容器内 Athena：`http://athena-api:8080`。
+  - 转发可选 `ATHENA_AUTH_TOKEN`，供 Athena 启用认证 middleware 时使用。
   - 默认启用 CSV provider，避免双服务演示依赖第三方市场数据 key。
 - `scripts/fake_openai_tool_model.js`
   - 提供 Docker smoke 使用的 OpenAI-compatible tool-call 模型替身。
@@ -31,6 +32,7 @@
 - fake 模型只用于 smoke，不代表真实模型质量。
 - CSV provider 只用于本地兜底，不冒充授权实时行情。
 - 不包含支付、订阅、券商账号集成或自动交易能力。
+- token 不写入 `.env.example` 之外的版本库内容，也不进入 conversation trace。
 
 ## 验证
 
