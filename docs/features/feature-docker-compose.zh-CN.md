@@ -37,9 +37,13 @@
 - `docker compose -f docker-compose.yml -f docker-compose.dual.yml config`
 - `bash -n scripts/smoke_dual_docker.sh`
 - `git diff --check`
+- 本机基础 Compose 运行时验证：
+  - `docker compose up -d --build` 已成功完成。
+  - Web、API、PostgreSQL 和 Redis 均进入 healthy 状态。
+  - `GET http://127.0.0.1:8081/readyz` 返回 `{"status":"ready"}`，基金分析接口返回三档 matrix，且治理结论为 `passed`。
 - 尝试运行 `ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh`：
   - 已完成基础镜像拉取、Athena Dockerfile 解析、依赖下载和进入 Athena `go build` 阶段。
   - 本机 Docker 首次构建在 Athena `go build` 阶段长时间无输出，已人工中断并清理 `athena-fund-dual-smoke` compose 资源。
   - 后续复查发现新建 `docker run --rm alpine:3.20 sh -lc 'echo ok'` 和 `docker run --rm golang:1.23-alpine ...` 都停留在 `Created`，未进入 `Running`；这说明当前 Docker Desktop 新容器启动路径不健康，不是 fund assistant 业务代码的确定性失败证据。
   - 已移除停留在 `Created` 的测试容器，并终止挂住的 Docker CLI 进程。
-  - 后续需要在 Docker Desktop 恢复、Docker cache 就绪或 CI 资源更稳定时重新运行完整 smoke，取得最终 pass 证据。
+  - 后续需要在 Athena 镜像构建可在可接受的本机时间预算内完成，或 CI 资源更稳定时重新运行完整 smoke，取得最终 pass 证据。

@@ -37,9 +37,13 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - `docker compose -f docker-compose.yml -f docker-compose.dual.yml config`
 - `bash -n scripts/smoke_dual_docker.sh`
 - `git diff --check`
+- Local base Compose runtime verification:
+  - `docker compose up -d --build` completed successfully.
+  - Web, API, PostgreSQL, and Redis reached healthy status.
+  - `GET http://127.0.0.1:8081/readyz` returned `{"status":"ready"}` and the fund analysis endpoint returned a three-option matrix with a `passed` governance decision.
 - Attempted `ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh`:
   - It completed base image pulls, Athena Dockerfile parsing, dependency download, and reached the Athena `go build` step.
   - Local Docker's first Athena build produced no output for an extended period during `go build`, so it was manually interrupted and the `athena-fund-dual-smoke` compose resources were cleaned up.
   - A later check showed that new `docker run --rm alpine:3.20 sh -lc 'echo ok'` and `docker run --rm golang:1.23-alpine ...` containers stayed in `Created` and never entered `Running`; this points to an unhealthy Docker Desktop new-container start path rather than deterministic fund assistant business-code failure.
   - The test containers left in `Created` were removed, and the hung Docker CLI processes were terminated.
-  - A full smoke pass still needs to be rerun once Docker Desktop recovers, Docker cache is warm, or CI resources are more stable.
+  - A full smoke pass still needs to be rerun after the Athena image build completes within an acceptable local time budget or CI resources are more stable.
