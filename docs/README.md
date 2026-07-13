@@ -44,6 +44,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 用户偏好、agent.md、策略知识库、版本和治理边界中文说明。
 - `features/feature-preference-knowledge.en-US.md`
   - English description of user preferences, agent.md, strategy knowledge base, revisions, and governance boundaries.
+- `features/feature-financial-governance.zh-CN.md`
+  - 金融建议输出治理门的中文规则、产品边界和验证证据。
+- `features/feature-financial-governance.en-US.md`
+  - English rules, product boundaries, and verification evidence for the financial-output governance gate.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`
