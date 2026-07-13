@@ -67,6 +67,9 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 	if err := analysisResp.DecisionMatrix.Validate(); err != nil {
 		t.Fatalf("matrix invalid: %v", err)
 	}
+	if !analysisResp.Governance.Allowed() {
+		t.Fatalf("analysis governance = %#v, want deliverable output", analysisResp.Governance)
+	}
 
 	journalReq := journalRequest{
 		Matrix:           analysisResp.DecisionMatrix,

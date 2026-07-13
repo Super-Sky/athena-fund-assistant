@@ -13,6 +13,7 @@ import (
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
 	"github.com/Super-Sky/athena-fund-assistant/internal/domain"
+	"github.com/Super-Sky/athena-fund-assistant/internal/governance"
 	"github.com/Super-Sky/athena-fund-assistant/internal/journal"
 	"github.com/Super-Sky/athena-fund-assistant/internal/preference"
 )
@@ -27,6 +28,7 @@ type Dependencies struct {
 	Conversations conversation.Store
 	Preferences   preference.Store
 	Athena        athena.Client
+	Governance    *governance.Gate
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -38,6 +40,9 @@ type Server struct {
 // New creates a server from explicit dependencies.
 // New 使用显式依赖创建服务。
 func New(deps Dependencies) *Server {
+	if deps.Governance == nil {
+		deps.Governance = governance.NewGate()
+	}
 	return &Server{deps: deps}
 }
 
@@ -81,6 +86,7 @@ type analysisResponse struct {
 	FundSnapshot   domain.FundSnapshot    `json:"fund_snapshot"`
 	Diagnosis      domain.Diagnosis       `json:"diagnosis"`
 	DecisionMatrix domain.DecisionMatrix  `json:"decision_matrix"`
+	Governance     governance.Result      `json:"governance"`
 }
 
 type journalRequest struct {
@@ -397,6 +403,11 @@ func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	governanceResult := s.deps.Governance.Evaluate(matrix)
+	if !governanceResult.Allowed() {
+		writeError(w, http.StatusUnprocessableEntity, errText("generated financial output failed governance checks"))
+		return
+	}
 
 	writeJSON(w, http.StatusOK, analysisResponse{
 		Profile:        req.Profile,
@@ -404,6 +415,7 @@ func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
 		FundSnapshot:   snapshot,
 		Diagnosis:      diagnosis,
 		DecisionMatrix: matrix,
+		Governance:     governanceResult,
 	})
 }
 

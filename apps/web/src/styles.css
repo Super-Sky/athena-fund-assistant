@@ -753,6 +753,18 @@ textarea:focus {
   margin: 17px 0 0;
 }
 
+.governance-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.governance-summary > span:last-child {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .trace-list dt {
   color: var(--muted);
   font-size: 0.76rem;
@@ -1411,5 +1423,17 @@ textarea:focus {
 
   .workspace {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .snapshot-grid,
+  .metric-row,
+  .option-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tag {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

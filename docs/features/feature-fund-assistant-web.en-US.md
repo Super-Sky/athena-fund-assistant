@@ -10,6 +10,7 @@ This feature moves the fund assistant from a local API slice to an interactive w
 - The web app calls the Go API over HTTP and must not import backend internals.
 - Current default data still comes from the mock provider that passes startup validation.
 - The UI must show `mock_data_temporary`, provider, source, license, confidence, market time, and fetched time.
+- The trace surface must show the concise `governance` decision; only flagged checks expand into supporting text.
 - Financial output must stay multi-option and avoid a single absolute conclusion.
 - This feature does not implement automatic trading, brokerage order placement, custody, or brokerage credential storage.
 
@@ -33,7 +34,7 @@ This feature moves the fund assistant from a local API slice to an interactive w
 1. The user enters risk preference, drawdown constraints, single-instrument cap, and holding data in the web app.
 2. The web app calls `POST /api/analysis/fund`.
 3. The API uses a validated provider snapshot to generate diagnosis plus conservative / balanced / aggressive decision options.
-4. The web app displays strategy cards, evidence, risks, invalidation conditions, review timing, and trace.
+4. The web app displays strategy cards, evidence, risks, invalidation conditions, review timing, a concise governance state, and trace.
 5. After the user selects one option, the web app calls `POST /api/journals`.
 6. The API creates a journal entry and review task, and the web app displays the next review task.
 

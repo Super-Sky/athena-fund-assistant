@@ -16,6 +16,7 @@
 - `ATHENA_AUTH_TOKEN` 可选，会作为 Bearer token 发给 Athena。
 - mock 数据必须在 trace 中显示 `mock_data_temporary=true`；mock / CSV 兜底数据必须在决策 trace 中显示 `temporary_data=true` 和明确的 `data_boundary`。
 - 金融输出必须包含多方案、依据、风险、反证条件和复盘时间。
+- 基金分析会返回确定性的 `governance` 结果。`blocked` 输出会被拒绝；`flagged` 输出仍会返回，但会保留来源/新鲜度披露。
 
 ## `GET /healthz`
 
@@ -269,6 +270,13 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `rule_evaluations`
 - `governance_checks`
 - `mock_data_temporary`
+
+响应还包含 `governance`：
+
+- `decision`：`passed`、`flagged` 或 `blocked`。
+- `checks`：按规则给出的状态和安全说明。
+
+当生成输出为 `blocked` 时，接口会返回 `422`。阻断范围包括收益承诺措辞、自动交易措辞、单一路径绝对指令、方案数量不足，或无推导依据的仓位调整。风险、反证条件、复盘时间、来源或新鲜度缺失会以 `flagged` 披露返回。
 
 ## `GET /api/users/{user_id}/knowledge`
 

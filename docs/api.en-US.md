@@ -16,6 +16,7 @@ This API belongs to the fund assistant business application layer, not Athena co
 - `ATHENA_AUTH_TOKEN` is optional and is sent to Athena as a Bearer token.
 - Mock data must surface `mock_data_temporary=true` in trace output. Mock / CSV fallback data must surface `temporary_data=true` and an explicit `data_boundary` in decision traces.
 - Financial output must include multiple options, evidence, risks, invalidation conditions, and review timing.
+- Fund analysis returns a deterministic `governance` result. `blocked` output is rejected; `flagged` output remains visible with its source/freshness disclosure.
 
 ## `GET /healthz`
 
@@ -269,6 +270,13 @@ Response fields:
 - `rule_evaluations`
 - `governance_checks`
 - `mock_data_temporary`
+
+The response also contains `governance`:
+
+- `decision`: `passed`, `flagged`, or `blocked`.
+- `checks`: rule-level status and a safe explanatory message.
+
+The endpoint returns `422` when a generated output is `blocked`, including guaranteed-return language, automatic-trading language, single absolute commands, insufficient options, or an allocation change without a derivation basis. Missing risk, invalidation, review timing, source, or freshness fields are returned as `flagged` disclosures.
 
 ## `GET /api/users/{user_id}/knowledge`
 
