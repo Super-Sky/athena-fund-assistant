@@ -108,6 +108,17 @@ type DecisionMatrix = {
   trace: TraceSummary;
 };
 
+type GovernanceCheck = {
+  rule: string;
+  status: "passed" | "flagged" | "blocked";
+  message: string;
+};
+
+type GovernanceResult = {
+  decision: "passed" | "flagged" | "blocked";
+  checks: GovernanceCheck[];
+};
+
 type AnalysisResponse = {
   profile: InvestorProfile;
   portfolio: {
@@ -116,6 +127,7 @@ type AnalysisResponse = {
   fund_snapshot: FundSnapshot;
   diagnosis: Diagnosis;
   decision_matrix: DecisionMatrix;
+  governance: GovernanceResult;
 };
 
 type JournalResponse = {
@@ -1175,6 +1187,9 @@ function NumberField({
 function SnapshotView({ analysis }: { analysis: AnalysisResponse }) {
   const snapshot = analysis.fund_snapshot;
   const trace = analysis.decision_matrix.trace;
+  const governanceTone = analysis.governance.decision === "passed" ? "evidence" : analysis.governance.decision === "flagged" ? "warning" : "risk";
+  const governanceLabel = analysis.governance.decision === "passed" ? "治理已通过" : analysis.governance.decision === "flagged" ? "需要复核" : "已阻断";
+  const flaggedChecks = analysis.governance.checks.filter((check) => check.status !== "passed");
   return (
     <section className="snapshot-grid">
       <div className="metric-board">
@@ -1193,6 +1208,10 @@ function SnapshotView({ analysis }: { analysis: AnalysisResponse }) {
 
       <div className="trace-board">
         <PanelTitle icon="activity" title="Trace" caption="数据来源与治理状态" />
+        <div className="governance-summary">
+          <span className={`tag ${governanceTone}`}><Icon name={analysis.governance.decision === "passed" ? "check" : "shield"} />{governanceLabel}</span>
+          {flaggedChecks.length > 0 ? <span>{flaggedChecks.map((check) => check.message).join("；")}</span> : null}
+        </div>
         <dl className="trace-list">
           <TraceItem label="provider" value={trace.data_provider} />
           <TraceItem label="source" value={trace.data_source} />

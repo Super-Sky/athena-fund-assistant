@@ -10,6 +10,7 @@
 - Web 通过 HTTP 调用 Go API，不 import 后端内部包。
 - 当前默认数据仍来自通过启动前 validation 的 mock provider。
 - UI 必须显示 `mock_data_temporary`、provider、source、license、confidence、market time 和 fetched time。
+- Trace 区必须展示简洁的 `governance` 结论；只有被标记的检查才展开辅助文字。
 - 输出必须保持多方案，不给单一路径绝对结论。
 - 本功能不做自动交易、券商下单、资金托管或账户凭据存储。
 
@@ -33,7 +34,7 @@
 1. 用户在 Web 输入风险偏好、回撤约束、单标的上限和持仓信息。
 2. Web 调用 `POST /api/analysis/fund`。
 3. API 使用已验证的 provider 快照生成 diagnosis 和 conservative / balanced / aggressive 三档 matrix。
-4. Web 展示策略卡、依据、风险、反证条件、复盘时间和 trace。
+4. Web 展示策略卡、依据、风险、反证条件、复盘时间、简洁的治理状态和 trace。
 5. 用户选择一个方案后，Web 调用 `POST /api/journals`。
 6. API 创建 journal 和 review task，Web 展示下一次复盘任务。
 
