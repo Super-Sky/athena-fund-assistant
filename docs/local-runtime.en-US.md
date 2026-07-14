@@ -66,6 +66,26 @@ go run ./cmd/api
 
 The CSV provider is a local MVP / demo fallback, not a licensed real-time market-data feed. Every CSV row must preserve `source`, `provider`, `fetched_at`, `market_time`, `timezone`, `delay`, `license_terms`, `confidence`, and `schema_version`. The sample file uses `user_supplied_csv_for_local_mvp_not_licensed_live_feed` to make the license boundary explicit.
 
+Use a user-owned Alpha Vantage key only after its provider probe has passed:
+
+```bash
+ALPHA_VANTAGE_API_KEY=... \
+ATHENA_FUND_PROVIDER=alpha_vantage \
+go run ./cmd/api
+```
+
+This mode validates QQQ ETF, AAPL equity, an explicit S&P 500 ETF proxy, and USD/CNY before listening. Alpha Vantage does not supply the exchange-calendar authority in this implementation, so calendar capability remains unavailable rather than guessed. `SPX`, `NDX`, and `DJI` are clearly labeled ETF proxies (`SPY`, `QQQ`, `DIA`), not direct index feeds.
+
+Use a user-owned Tushare token only after its provider probe has passed:
+
+```bash
+TUSHARE_TOKEN=... \
+ATHENA_FUND_PROVIDER=tushare \
+go run ./cmd/api
+```
+
+This mode validates China public-fund NAV, CSI 300 index, and the SSE calendar before listening. It does not supply US equity, FX, or US calendar records; a future composition layer must only combine separately admitted providers.
+
 ## Dual-Service Smoke
 
 This repository includes a local smoke script that starts Athena, the fund assistant, and a fake OpenAI-compatible model to verify the full local contract:
@@ -146,7 +166,7 @@ The script builds and starts the dual-service Docker topology, registers the fak
 
 - The API container reads `DATABASE_URL` for account-dashboard and journal/review persistence. `REDIS_URL` remains reserved for later caching and async work.
 - The API reads `ATHENA_FUND_UPLOAD_DIR` as the attachment upload directory. If unset, the system temp directory is used.
-- The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, while `csv` reads `ATHENA_FUND_CSV_PATH`.
+- The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, `csv` reads `ATHENA_FUND_CSV_PATH`, `alpha_vantage` requires `ALPHA_VANTAGE_API_KEY`, and `tushare` requires `TUSHARE_TOKEN`.
 - The API reads `ATHENA_BASE_URL` and optional `ATHENA_AUTH_TOKEN`; when unset, it uses the mock Athena client for single-service demos.
 - The dual-service Docker overlay also reads `ATHENA_REPO`, `ATHENA_DUAL_API_PORT`, `ATHENA_FAKE_MODEL_PORT`, `ATHENA_FUND_PROVIDER`, and `ATHENA_FUND_CSV_PATH`.
 - Mock / CSV data must continue to be marked as temporary or user-supplied in UI / trace output.

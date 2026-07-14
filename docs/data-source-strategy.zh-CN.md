@@ -264,6 +264,8 @@ MVP 美股 provider 至少需要覆盖：
 - `alpha_vantage_provider`
 - `tushare_provider`
 
+实现状态：`alpha_vantage_provider` 与 `tushare_provider` 已通过显式的用户 Key / 用户 Token 启动模式接入，但两者都不是默认 provider。每次启动服务前都会重新执行结构和 metadata validation。Alpha Vantage 的基准值使用 ETF 代理并明确标注；交易所日历能力有意保持不可用。Tushare 当前仅覆盖中国基金净值、沪深 300 和上交所日历。后续跨市场组合 provider 必须保留底层 provider metadata，不能把它隐藏掉。
+
 ### 第二批
 
 - `fmp_provider`
@@ -280,15 +282,13 @@ MVP 美股 provider 至少需要覆盖：
 
 Provider 必须实现：
 
-- `ListInstruments`
 - `GetFundSnapshot`
-- `GetMarketSnapshot`
-- `GetHistoricalPrices`
 - `GetEquitySnapshot`
 - `GetIndexSnapshot`
-- `GetFxRate`
+- `GetFXRate`
 - `GetMarketCalendar`
-- `GetProviderStatus`
+
+需要凭据的 adapter 还必须实现 `ProviderName` 与 `ValidateCredentials`。不支持的能力必须返回明确错误，不能伪造交易日历、价格或汇率观测值。
 
 Provider 返回值必须包含：
 
