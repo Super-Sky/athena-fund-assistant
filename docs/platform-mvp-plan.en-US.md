@@ -29,6 +29,8 @@ Both projects should keep a consistent stack:
 - Checkpoint / resume.
 - Built-in basic tools.
 - Control Plane / System Validation / runtime readout.
+- Standard OpenTelemetry trace projection, redaction, and optional observability-backend export.
+- Generic execution budgets, deadlines, stop conditions, and asynchronous-job contracts.
 
 ### athena-fund-assistant Owns
 
@@ -43,6 +45,7 @@ Both projects should keep a consistent stack:
 - Review tasks.
 - Fund business UI.
 - Financial scenario governance rules.
+- Domain evaluation suites based on real data, user consent, and investment constraints.
 
 ## Layering Rules
 
@@ -50,6 +53,14 @@ Both projects should keep a consistent stack:
 - Athena core must not hard-code fund, ETF, allocation, NAV, or return semantics.
 - The fund assistant must not import Athena internal Go packages.
 - The two services integrate through APIs, SDKs, or tool contracts.
+
+## Evolution Principles
+
+- **Validate the foundation through the fund scenario without contaminating it**: each Athena capability is driven by a clear fund-analysis need but ships as a generic goal, tool, context, trace, or governance contract.
+- **Athena persisted runtime records are the source of truth**: PostgreSQL run, step, trace, usage, and audit data serve product admin, consent audit, and retention needs; external observability systems receive only redacted projections.
+- **Validate before coding**: market data, search, document parsing, and external tools must confirm authorization, fields, timezone, quota, failures, and observability fields before entering the decision workflow.
+- **Do not stop an agent at a fixed iteration count**: completion must follow success criteria, budget, deadline, external-data wait, human confirmation, unrecoverable error, or governance denial.
+- **Every recommendation is reviewable**: it must link data source, timestamp, tool calls, user preferences, strategy basis, risks, and invalidation conditions; automatic trading is excluded.
 
 ## MVP Phases
 
@@ -113,6 +124,7 @@ Deliverables:
 - Memory read/write.
 - Governance evaluation.
 - Trace readout.
+- Run budget, deadline, stop reason, and asynchronous resumption.
 
 Acceptance:
 
@@ -136,6 +148,62 @@ Acceptance:
 - A user can complete one fund diagnosis and choose one decision option.
 - The decision journal is visible.
 - Athena / fund-app traces can be inspected.
+
+### Phase 5: Fund-Driven Agent Runtime Reinforcement
+
+This phase uses one acceptance scenario: a user asks whether their portfolio needs adjustment. The Agent must read authorized account summaries and preferences, obtain freshness-tagged market data, select read-only business tools, produce three options, and leave an explainable end-to-end trace.
+
+Deliverables:
+
+- Athena generic agent loop: success criteria, budget, deadline, tool retry, waiting / terminal stop reason, checkpoint / resume.
+- `OpenTelemetry Collector` export path and an optional self-hosted `Langfuse` Docker profile; by default export only allowlisted, redacted span attributes.
+- Unified trace and correlation IDs for run / step / model / tool / memory / governance / remote callbacks.
+- Actual Redis integration for cache, concurrency/rate limits, idempotency locks, and async jobs; start with a Go-native queue and evaluate Temporal separately for complex multi-day workflows.
+- A `pgvector` knowledge and memory retrieval slice using PostgreSQL first, without a separate vector database.
+- Generic built-in tools: HTTP fetch, search-provider adapter, calculator, time / market calendar, and file-schema validation. Fund-domain tools remain remotely registered by the fund assistant.
+
+Acceptance:
+
+- The same `run_id` can be correlated by trace ID in Athena admin and the optional observability backend without exporting credentials, raw sensitive holdings, or unredacted prompts.
+- Normal runs, tool errors, timeouts, governance denials, waiting-for-data, and resumes have stable stop reasons and traces.
+- If Redis is unavailable, the system explicitly degrades or fails rather than silently claiming cache or async success.
+
+### Phase 6: Trusted Fund Decisions And Continuous Evaluation
+
+Deliverables:
+
+- In-repository `Promptfoo` evaluation configuration and CI commands covering missing or stale data, tool failure, single-path conclusions, guaranteed-return language, missing risk/invalidation, unsupported percentages, and unauthorized account reads.
+- User-account authentication, token/session, read-only data consent, tool scopes, consent revocation, and audit events. Brokerage sync remains read-only and requires separate consent.
+- Restricted document parsing, OCR, and web search plugins with governed size, file type, outbound domains, timeout, source, and citations; untrusted execution goes through an isolated sandbox.
+- Keep the model gateway optional: retain the Athena provider abstraction first, then add a LiteLLM profile only when multi-provider routing, virtual keys, or central budgets are justified.
+
+Acceptance:
+
+- Fund recommendations pass financial governance and regression evaluations before reaching the UI; failed cases block release rather than merely being logged.
+- A user can view and revoke data consent; affected remote tools are denied by the governance layer after revocation.
+- Every data point, retrieval, attachment, and strategy conclusion in a decision journal can be traced to consent and source metadata.
+
+## Component Admission Matrix
+
+| Capability | Current choice | Admission phase | Reason to defer or avoid |
+| --- | --- | --- | --- |
+| Agent trace / LLM eval | OpenTelemetry Collector + optional Langfuse | Phase 5 | Athena trace remains the source of truth, preventing product admin from depending on a third-party data model. |
+| Cache / queue | Redis + Go-native queue | Phase 5 | Docker Redis already exists; assess Temporal only after multi-day workflows, approvals, and complex recovery appear. |
+| Knowledge retrieval | PostgreSQL + pgvector | Phase 5 | Avoid Qdrant / Milvus / Weaviate replication and operations initially. |
+| LLM gateway | Athena provider abstraction; optional LiteLLM profile | After Phase 6 | Do not add a Python service before multi-tenant routing, virtual keys, or central cost settlement are needed. |
+| Continuous eval | Promptfoo | Phase 6 | Cases live in the fund app but must feed back into Athena runtime contracts. |
+| Auth / secrets | App JWT/OAuth, Docker secrets; external secrets manager later | Phase 6 | Introduce Keycloak / Vault only when enterprise SSO or multi-environment key rotation is concrete. |
+| Sandbox | Restricted Docker executor | Phase 6 | Enable only for untrusted scripts or complex file processing. |
+| Dedicated vector DB | Do not introduce yet | Later | Create a task only after pgvector capacity, latency, or retrieval quality becomes a measurable bottleneck. |
+
+## Issue Dependencies And Execution Order
+
+1. **Existing Athena integration chain**: `Athena#7` → `#8` → `#9` → `#14` → `#10` → `#11` → `#12`. First complete the generic run, tool, remote callback, built-in tools, memory, trace, and Docker merges plus the dual-service smoke.
+2. **Existing fund business chain**: progress `fund#15`, `#16`, `#17` alongside `fund#10` and `#11`; live providers still require user-owned key/token validation before becoming the default path.
+3. **New Athena evolution chain**: `Athena#21` observability projection → `Athena#22` execution-control/Redis job contract → `Athena#23` pgvector memory retrieval. These depend only on generic runtime contracts and cannot read fund tables.
+4. **New trusted-fund chain**: `fund#30` account consent → `fund#31` Promptfoo financial evaluation → restricted document/search plugins. These call Athena through remote tools and do not modify Athena core.
+
+Before implementation, each task must create or update its canonical GitHub Issue in the owning repository. Cross-repository dependencies use `Refs`; unfinished work must not use `Closes`.
 
 ## Multi-Agent / Parallel Development Split
 

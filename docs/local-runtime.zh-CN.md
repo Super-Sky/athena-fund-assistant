@@ -91,7 +91,7 @@ go run ./cmd/api
 使用本仓脚本可以在本机启动 Athena、fund assistant 和一个 fake OpenAI-compatible 模型，验证完整本地链路：
 
 ```bash
-ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```
 
 脚本会验证：

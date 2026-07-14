@@ -174,6 +174,28 @@ Acceptance:
 - Knowledge updates are versioned, traceable, governed, and rollbackable.
 - Decision percentages can cite strategy templates, preferences, or data evidence.
 
+## Issue 30: Read-Only Account Authorization And Consent Audit
+
+Create the account-access boundary required before user-authorized portfolio or brokerage data can be exposed to an Athena remote tool.
+
+Acceptance:
+
+- A user identity, session, read-only data authorization, tool scope, expiration, and revocation are modeled and audited.
+- A revoked or expired authorization makes the associated fund remote tool fail with a stable governed denial.
+- No brokerage order, trade placement, or write permission is introduced.
+- Decision-journal trace can identify the authorization and data-source metadata used for the analysis.
+
+## Issue 31: Financial Agent Evaluation And Release Gate
+
+Add repeatable quality and safety evaluation for fund-analysis workflows.
+
+Acceptance:
+
+- Promptfoo runs deterministic and model-assisted cases locally and in CI.
+- Cases cover stale/missing data, provider failure, unsupported source attribution, guaranteed-return language, single-path conclusions, missing risk/invalidation, unsupported percentages, and unauthorized account access.
+- A failed mandatory case blocks the release path.
+- The evaluation suite consumes Athena trace-safe outputs and fund decision evidence without requiring Athena to own fund business data.
+
 ## Athena Dependency Issues
 
 The fund assistant depends on these Athena runtime foundation tasks:
@@ -184,3 +206,14 @@ The fund assistant depends on these Athena runtime foundation tasks:
 - `Super-Sky/Athena#10`: External memory and context asset APIs for business apps.
 - `Super-Sky/Athena#11`: Agent trace timeline API and admin readout.
 - `Super-Sky/Athena#12`: Docker Compose runtime profile with PostgreSQL and Redis.
+- `Super-Sky/Athena#14`: Built-in basic tools pack for agent runs.
+- `Super-Sky/Athena#21`: OpenTelemetry trace projection and optional Langfuse runtime profile.
+- `Super-Sky/Athena#22`: goal-driven execution controls, Redis-backed async-job contract, and stable stop reasons.
+- `Super-Sky/Athena#23`: pgvector-backed governed memory retrieval for business-app context.
+
+## Follow-Up Sequencing
+
+1. Finish and merge the existing Agent Run / tool / remote-tool stack, then run the dual-service smoke.
+2. Make real provider validation pass using user-owned credentials; wire Redis cache and freshness status around the approved providers.
+3. Add Athena `#21`–`#23` while the fund app exercises them through read-only analysis tools.
+4. Add fund `#30` consent before any account synchronization, then enforce fund `#31` before a release demo.

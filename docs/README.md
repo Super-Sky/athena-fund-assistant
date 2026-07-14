@@ -16,6 +16,10 @@ Existing single-language planning documents remain as seed drafts until they are
 
 ## Planning Docs
 
+- `features/feature-fund-driven-agent-roadmap.zh-CN.md`
+  - 基金分析场景推动 Athena Agent 演进的中文路线图、组件准入和 Issue 依赖。
+- `features/feature-fund-driven-agent-roadmap.en-US.md`
+  - English roadmap for fund-driven Athena Agent evolution, component admission, and Issue dependencies.
 - `features/feature-fund-assistant-web.zh-CN.md`
   - 基金助手 Web MVP 当前实现的中文说明、边界和验收证据。
 - `features/feature-fund-assistant-web.en-US.md`
