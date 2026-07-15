@@ -119,6 +119,8 @@ Request fields:
 
 The response is `ConversationDetail` with `session`, `messages`, `attachments`, and `trace`.
 
+`messages`, `attachments`, and `trace` are always JSON arrays. They return `[]`, never `null`, when no records exist.
+
 ## `GET /api/conversations/{conversation_id}`
 
 Reads conversation detail, messages, attachment metadata, and trace timeline.

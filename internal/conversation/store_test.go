@@ -16,6 +16,9 @@ func TestMemoryStoreConversationAttachmentAndTrace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create conversation error = %v", err)
 	}
+	if detail.Messages == nil || detail.Attachments == nil || detail.Trace == nil {
+		t.Fatalf("empty conversation collections must be non-nil: %#v", detail)
+	}
 	attachment, err := store.SaveAttachment(ctx, detail.Session.ID, AttachmentInput{
 		UserID:      "demo-user",
 		FileName:    "statement.csv",

@@ -316,9 +316,9 @@ func (s *MemoryStore) detailLocked(conversationID string) (domain.ConversationDe
 	}
 	detail := domain.ConversationDetail{
 		Session:     session,
-		Messages:    append([]domain.ConversationMessage(nil), s.messages[conversationID]...),
-		Attachments: append([]domain.ConversationAttachment(nil), s.attachments[conversationID]...),
-		Trace:       append([]domain.ConversationTraceEvent(nil), s.trace[conversationID]...),
+		Messages:    append([]domain.ConversationMessage{}, s.messages[conversationID]...),
+		Attachments: append([]domain.ConversationAttachment{}, s.attachments[conversationID]...),
+		Trace:       append([]domain.ConversationTraceEvent{}, s.trace[conversationID]...),
 	}
 	if err := detail.Validate(); err != nil {
 		return domain.ConversationDetail{}, err

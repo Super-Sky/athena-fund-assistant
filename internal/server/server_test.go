@@ -231,6 +231,9 @@ func TestConversationWorkspaceWorkflow(t *testing.T) {
 	if err := json.Unmarshal(createRR.Body.Bytes(), &detail); err != nil {
 		t.Fatalf("decode conversation: %v", err)
 	}
+	if detail.Messages == nil || detail.Attachments == nil || detail.Trace == nil {
+		t.Fatalf("conversation API collections must decode from JSON arrays: body=%s", createRR.Body.String())
+	}
 
 	var uploadBody bytes.Buffer
 	writer := multipart.NewWriter(&uploadBody)
