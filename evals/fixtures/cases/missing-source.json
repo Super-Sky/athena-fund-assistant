@@ -1,0 +1,84 @@
+{
+  "schema_version": "athena-fund-eval/v1",
+  "id": "missing-source",
+  "evaluation_time": "2026-07-15T02:00:00Z",
+  "input": {
+    "user_query": "Review a snapshot whose source label was omitted."
+  },
+  "execution": {
+    "provider": {
+      "name": "fixed-fixture-market-data",
+      "status": "ok"
+    },
+    "tools": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ]
+  },
+  "response": {
+    "delivery_status": "flagged",
+    "message": "Options retain a warning because provenance is incomplete.",
+    "disclosures": [
+      {
+        "code": "source_metadata_missing",
+        "message": "Required source field is missing."
+      }
+    ],
+    "data": {
+      "status": "fresh",
+      "max_age_hours": 24,
+      "source": {
+        "source": "",
+        "provider": "fixed-fixture-market-data",
+        "fetched_at": "2026-07-15T01:00:00Z",
+        "market_time": "2026-07-15T00:00:00Z",
+        "timezone": "Asia/Shanghai"
+      }
+    },
+    "options": [
+      {
+        "id": "wait",
+        "action": "Wait for source-confirmed data.",
+        "allocation_change_pct": 0,
+        "strategy_basis": ["source_metadata_policy"],
+        "evidence": ["Provider metadata exists but the source label is empty."],
+        "risks": ["Current provenance cannot be independently reviewed."],
+        "invalidation": "A complete source label is attached.",
+        "review_after_days": 1
+      },
+      {
+        "id": "manual-check",
+        "action": "Review source records before any allocation decision.",
+        "allocation_change_pct": 0,
+        "strategy_basis": ["manual_source_review"],
+        "evidence": ["The fixture intentionally omits source."],
+        "risks": ["Manual verification may delay the review."],
+        "invalidation": "Source metadata validation succeeds.",
+        "review_after_days": 1
+      }
+    ],
+    "governance": {
+      "decision": "flagged"
+    }
+  },
+  "athena_trace": {
+    "run_id": "run_eval_missing_source",
+    "trace_id": "trace_eval_missing_source",
+    "duration_ms": 120,
+    "safety_summary": {
+      "business_payload_included": false,
+      "sensitive_values_included": false
+    },
+    "status": "completed",
+    "stop_reason": "completed_with_disclosure",
+    "tool_calls": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ],
+    "audit": []
+  }
+}

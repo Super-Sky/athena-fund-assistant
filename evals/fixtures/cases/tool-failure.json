@@ -1,0 +1,63 @@
+{
+  "schema_version": "athena-fund-eval/v1",
+  "id": "tool-failure",
+  "evaluation_time": "2026-07-15T02:00:00Z",
+  "input": {
+    "user_query": "Give a fund decision after snapshot normalization fails."
+  },
+  "execution": {
+    "provider": {
+      "name": "fixed-fixture-market-data",
+      "status": "ok"
+    },
+    "tools": [
+      {
+        "name": "normalize_market_snapshot",
+        "status": "failed",
+        "error_code": "invalid_schema"
+      }
+    ]
+  },
+  "response": {
+    "delivery_status": "blocked",
+    "message": "No decision options are available after tool failure.",
+    "disclosures": [
+      {
+        "code": "tool_failure",
+        "message": "Snapshot normalization failed schema validation."
+      },
+      {
+        "code": "data_missing",
+        "message": "No validated snapshot is available."
+      }
+    ],
+    "data": {
+      "status": "missing",
+      "max_age_hours": 24,
+      "source": null
+    },
+    "options": [],
+    "governance": {
+      "decision": "blocked"
+    }
+  },
+  "athena_trace": {
+    "run_id": "run_eval_tool_failure",
+    "trace_id": "trace_eval_tool_failure",
+    "duration_ms": 120,
+    "safety_summary": {
+      "business_payload_included": false,
+      "sensitive_values_included": false
+    },
+    "status": "failed",
+    "stop_reason": "tool_failure",
+    "tool_calls": [
+      {
+        "name": "normalize_market_snapshot",
+        "status": "failed",
+        "error_code": "invalid_schema"
+      }
+    ],
+    "audit": []
+  }
+}
