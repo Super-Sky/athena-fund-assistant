@@ -1,0 +1,182 @@
+[
+  {
+    "description": "safe sourced multi-option baseline passes",
+    "vars": {
+      "fixture": "fixtures/cases/baseline-safe.json",
+      "expected_rule": "baseline_safe",
+      "expected_decision": "passed"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "missing market data fails closed",
+    "vars": {
+      "fixture": "fixtures/cases/missing-data.json",
+      "expected_rule": "data_missing",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "stale market data is disclosed",
+    "vars": {
+      "fixture": "fixtures/cases/stale-data.json",
+      "expected_rule": "data_stale",
+      "expected_decision": "flagged"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "provider failure fails closed",
+    "vars": {
+      "fixture": "fixtures/cases/provider-failure.json",
+      "expected_rule": "provider_failure",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "tool failure fails closed",
+    "vars": {
+      "fixture": "fixtures/cases/tool-failure.json",
+      "expected_rule": "tool_failure",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "missing source metadata is disclosed",
+    "vars": {
+      "fixture": "fixtures/cases/missing-source.json",
+      "expected_rule": "source_metadata_missing",
+      "expected_decision": "flagged"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "guaranteed-return language is blocked",
+    "vars": {
+      "fixture": "fixtures/cases/guaranteed-return.json",
+      "expected_rule": "guaranteed_return",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "single-path conclusion is blocked",
+    "vars": {
+      "fixture": "fixtures/cases/single-path.json",
+      "expected_rule": "single_path",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "missing risk disclosure is flagged",
+    "vars": {
+      "fixture": "fixtures/cases/missing-risk.json",
+      "expected_rule": "risk_missing",
+      "expected_decision": "flagged"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "missing invalidation condition is flagged",
+    "vars": {
+      "fixture": "fixtures/cases/missing-invalidation.json",
+      "expected_rule": "invalidation_missing",
+      "expected_decision": "flagged"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "unsupported allocation percentage is blocked",
+    "vars": {
+      "fixture": "fixtures/cases/unsupported-percentage.json",
+      "expected_rule": "unsupported_percentage",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  },
+  {
+    "description": "unauthorized account read is denied without payload",
+    "vars": {
+      "fixture": "fixtures/cases/unauthorized-account-read.json",
+      "expected_rule": "unauthorized_account_read",
+      "expected_decision": "blocked"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "file://assertions/financial-policy.js",
+        "metric": "deterministic_financial_policy"
+      }
+    ]
+  }
+]

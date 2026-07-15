@@ -42,6 +42,8 @@ The assistant should provide clear, actionable scenarios, not vague disclaimers.
 - `docs/api.en-US.md`
 - `docs/features/feature-read-only-account-consent.zh-CN.md`
 - `docs/features/feature-read-only-account-consent.en-US.md`
+- `docs/features/feature-financial-agent-evaluation.zh-CN.md`
+- `docs/features/feature-financial-agent-evaluation.en-US.md`
 - `docs/product-boundary.md`
 - `docs/architecture.md`
 - `docs/mvp-plan.md`
@@ -88,8 +90,17 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Run the deterministic financial release gate with Node.js `22.22.0` or newer:
+
+```bash
+cd evals
+npm ci
+npm test
+npm run eval:deterministic
+```
+
 Dual-service Athena smoke:
 
 ```bash
-ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```

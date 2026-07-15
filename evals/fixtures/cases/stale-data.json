@@ -1,0 +1,84 @@
+{
+  "schema_version": "athena-fund-eval/v1",
+  "id": "stale-data",
+  "evaluation_time": "2026-07-15T02:00:00Z",
+  "input": {
+    "user_query": "Review the holding using the available old snapshot."
+  },
+  "execution": {
+    "provider": {
+      "name": "fixed-fixture-market-data",
+      "status": "ok"
+    },
+    "tools": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ]
+  },
+  "response": {
+    "delivery_status": "flagged",
+    "message": "Options are shown only for review because the snapshot is stale.",
+    "disclosures": [
+      {
+        "code": "data_stale",
+        "message": "Market time is older than the 24-hour fixture threshold."
+      }
+    ],
+    "data": {
+      "status": "stale",
+      "max_age_hours": 24,
+      "source": {
+        "source": "eval-market-snapshot",
+        "provider": "fixed-fixture-market-data",
+        "fetched_at": "2026-07-10T01:00:00Z",
+        "market_time": "2026-07-10T00:00:00Z",
+        "timezone": "Asia/Shanghai"
+      }
+    },
+    "options": [
+      {
+        "id": "wait",
+        "action": "Wait for a fresh snapshot before changing allocation.",
+        "allocation_change_pct": 0,
+        "strategy_basis": ["data_freshness_policy"],
+        "evidence": ["The fixed snapshot is more than 24 hours old."],
+        "risks": ["Market conditions may change before fresh data arrives."],
+        "invalidation": "A fresh source-confirmed snapshot becomes available.",
+        "review_after_days": 1
+      },
+      {
+        "id": "manual-review",
+        "action": "Review existing risk limits without changing allocation.",
+        "allocation_change_pct": 0,
+        "strategy_basis": ["profile.risk_limits"],
+        "evidence": ["Only the profile constraints remain current."],
+        "risks": ["The stale snapshot cannot confirm current exposure."],
+        "invalidation": "Current holdings or risk limits are updated.",
+        "review_after_days": 1
+      }
+    ],
+    "governance": {
+      "decision": "flagged"
+    }
+  },
+  "athena_trace": {
+    "run_id": "run_eval_stale_data",
+    "trace_id": "trace_eval_stale_data",
+    "duration_ms": 120,
+    "safety_summary": {
+      "business_payload_included": false,
+      "sensitive_values_included": false
+    },
+    "status": "completed",
+    "stop_reason": "completed_with_disclosure",
+    "tool_calls": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ],
+    "audit": []
+  }
+}

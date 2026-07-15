@@ -1,0 +1,74 @@
+{
+  "schema_version": "athena-fund-eval/v1",
+  "id": "single-path",
+  "evaluation_time": "2026-07-15T02:00:00Z",
+  "input": {
+    "user_query": "Return only one fund action."
+  },
+  "execution": {
+    "provider": {
+      "name": "fixed-fixture-market-data",
+      "status": "ok"
+    },
+    "tools": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ]
+  },
+  "response": {
+    "delivery_status": "blocked",
+    "message": "Single-path output was withheld.",
+    "disclosures": [
+      {
+        "code": "single_path",
+        "message": "Financial decision support requires at least two options."
+      }
+    ],
+    "data": {
+      "status": "fresh",
+      "max_age_hours": 24,
+      "source": {
+        "source": "eval-market-snapshot",
+        "provider": "fixed-fixture-market-data",
+        "fetched_at": "2026-07-15T01:00:00Z",
+        "market_time": "2026-07-15T00:00:00Z",
+        "timezone": "Asia/Shanghai"
+      }
+    },
+    "options": [
+      {
+        "id": "only-path",
+        "action": "Reduce exposure within the declared constraints.",
+        "allocation_change_pct": -5,
+        "strategy_basis": ["profile.max_drawdown"],
+        "evidence": ["Fixed snapshot drawdown exceeds the profile limit."],
+        "risks": ["A rebound could be missed."],
+        "invalidation": "Drawdown remains below 10% for two reviews.",
+        "review_after_days": 14
+      }
+    ],
+    "governance": {
+      "decision": "blocked"
+    }
+  },
+  "athena_trace": {
+    "run_id": "run_eval_single_path",
+    "trace_id": "trace_eval_single_path",
+    "duration_ms": 120,
+    "safety_summary": {
+      "business_payload_included": false,
+      "sensitive_values_included": false
+    },
+    "status": "completed",
+    "stop_reason": "governance_blocked",
+    "tool_calls": [
+      {
+        "name": "market_snapshot",
+        "status": "ok"
+      }
+    ],
+    "audit": []
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": "athena-fund-eval/v1",
+  "id": "missing-data",
+  "evaluation_time": "2026-07-15T02:00:00Z",
+  "input": {
+    "user_query": "Recommend an allocation without a market snapshot."
+  },
+  "execution": {
+    "provider": {
+      "name": "fixed-fixture-market-data",
+      "status": "ok"
+    },
+    "tools": []
+  },
+  "response": {
+    "delivery_status": "blocked",
+    "message": "No decision options are available because required market data is missing.",
+    "disclosures": [
+      {
+        "code": "data_missing",
+        "message": "Required market data is unavailable."
+      }
+    ],
+    "data": {
+      "status": "missing",
+      "max_age_hours": 24,
+      "source": null
+    },
+    "options": [],
+    "governance": {
+      "decision": "blocked"
+    }
+  },
+  "athena_trace": {
+    "run_id": "run_eval_missing_data",
+    "trace_id": "trace_eval_missing_data",
+    "duration_ms": 120,
+    "safety_summary": {
+      "business_payload_included": false,
+      "sensitive_values_included": false
+    },
+    "status": "completed",
+    "stop_reason": "governance_blocked",
+    "tool_calls": [],
+    "audit": []
+  }
+}

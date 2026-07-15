@@ -1,0 +1,12 @@
+description: Athena fund assistant deterministic financial safety gate (#31A)
+
+prompts:
+  - "{{fixture}}"
+
+providers:
+  - id: file://providers/fixture-provider.js
+    label: fixed-json-fixture-provider
+    config:
+      fixtureRoot: fixtures
+
+tests: file://fixtures/tests.json
