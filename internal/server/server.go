@@ -21,14 +21,17 @@ import (
 // Dependencies groups the app services used by HTTP handlers.
 // Dependencies 汇总 HTTP handler 使用的应用服务。
 type Dependencies struct {
-	Provider      data.Provider
-	DecisionMaker *decision.Engine
-	Journals      journal.Store
-	Accounts      account.Store
-	Conversations conversation.Store
-	Preferences   preference.Store
-	Athena        athena.Client
-	Governance    *governance.Gate
+	Provider         data.Provider
+	DecisionMaker    *decision.Engine
+	Journals         journal.Store
+	Accounts         account.Store
+	Conversations    conversation.Store
+	Preferences      preference.Store
+	Athena           athena.Client
+	Governance       *governance.Gate
+	Authorization    AuthorizationService
+	LocalAuthSubject string
+	RemoteToolToken  string
 }
 
 // Server maps fund-assistant MVP workflows to HTTP endpoints.
@@ -52,6 +55,12 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /readyz", s.handleReady)
+	mux.HandleFunc("POST /api/auth/sessions", s.handleCreateSession)
+	mux.HandleFunc("GET /api/auth/session", s.handleCurrentSession)
+	mux.HandleFunc("DELETE /api/auth/sessions/current", s.handleRevokeCurrentSession)
+	mux.HandleFunc("GET /api/consents", s.handleListConsents)
+	mux.HandleFunc("POST /api/consents", s.handleCreateConsent)
+	mux.HandleFunc("POST /api/consents/{grant_ref}/revoke", s.handleRevokeConsent)
 	mux.HandleFunc("GET /api/accounts/{user_id}/overview", s.handleAccountOverview)
 	mux.HandleFunc("POST /api/accounts/{user_id}/holdings", s.handleReplaceAccountHoldings)
 	mux.HandleFunc("GET /api/conversations/skills", s.handleConversationSkills)
@@ -111,10 +120,12 @@ type createConversationRequest struct {
 }
 
 type addConversationMessageRequest struct {
-	Role          string   `json:"role"`
-	Content       string   `json:"content"`
-	SkillID       string   `json:"skill_id"`
-	AttachmentIDs []string `json:"attachment_ids"`
+	Role            string   `json:"role"`
+	Content         string   `json:"content"`
+	SkillID         string   `json:"skill_id"`
+	AttachmentIDs   []string `json:"attachment_ids"`
+	ConsentGrantRef string   `json:"consent_grant_ref,omitempty"`
+	UserID          string   `json:"-"`
 }
 
 type activateRevisionRequest struct {
@@ -142,7 +153,11 @@ func (s *Server) handleAccountOverview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errText("account store is not configured"))
 		return
 	}
-	overview, err := s.deps.Accounts.Overview(r.Context(), strings.TrimSpace(r.PathValue("user_id")))
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
+	overview, err := s.deps.Accounts.Overview(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -155,12 +170,16 @@ func (s *Server) handleReplaceAccountHoldings(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusServiceUnavailable, errText("account store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var req replaceHoldingsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	overview, err := s.deps.Accounts.ReplaceHoldings(r.Context(), strings.TrimSpace(r.PathValue("user_id")), req.Holdings)
+	overview, err := s.deps.Accounts.ReplaceHoldings(r.Context(), userID, req.Holdings)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -186,6 +205,13 @@ func (s *Server) handleCreateConversation(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	session, ok := s.requireSession(w, r, strings.TrimSpace(req.UserID))
+	if !ok {
+		return
+	}
+	if s.deps.Authorization != nil {
+		req.UserID = session.Subject
+	}
 	detail, err := s.deps.Conversations.Create(r.Context(), conversation.CreateInput{
 		UserID:  strings.TrimSpace(req.UserID),
 		SkillID: strings.TrimSpace(req.SkillID),
@@ -208,6 +234,9 @@ func (s *Server) handleConversationDetail(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
+	if _, ok := s.requireSession(w, r, detail.Session.UserID); !ok {
+		return
+	}
 	writeJSON(w, http.StatusOK, detail)
 }
 
@@ -216,12 +245,22 @@ func (s *Server) handleAddConversationMessage(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
 		return
 	}
+	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
+	existing, err := s.deps.Conversations.Detail(r.Context(), conversationID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	session, ok := s.requireSession(w, r, existing.Session.UserID)
+	if !ok {
+		return
+	}
 	var req addConversationMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
+	req.UserID = session.Subject
 	detail, err := s.deps.Conversations.AddMessage(r.Context(), conversationID, conversation.MessageInput{
 		Role:          strings.TrimSpace(req.Role),
 		Content:       strings.TrimSpace(req.Content),
@@ -255,6 +294,16 @@ func (s *Server) handleUploadConversationAttachment(w http.ResponseWriter, r *ht
 		writeError(w, http.StatusServiceUnavailable, errText("conversation store is not configured"))
 		return
 	}
+	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
+	detail, err := s.deps.Conversations.Detail(r.Context(), conversationID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	session, ok := s.requireSession(w, r, detail.Session.UserID)
+	if !ok {
+		return
+	}
 	if err := r.ParseMultipartForm(12 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -265,8 +314,8 @@ func (s *Server) handleUploadConversationAttachment(w http.ResponseWriter, r *ht
 		return
 	}
 	defer file.Close()
-	attachment, err := s.deps.Conversations.SaveAttachment(r.Context(), strings.TrimSpace(r.PathValue("conversation_id")), conversation.AttachmentInput{
-		UserID:      strings.TrimSpace(r.FormValue("user_id")),
+	attachment, err := s.deps.Conversations.SaveAttachment(r.Context(), conversationID, conversation.AttachmentInput{
+		UserID:      session.Subject,
 		FileName:    header.Filename,
 		ContentType: attachmentContentType(header),
 		SizeBytes:   header.Size,
@@ -284,7 +333,11 @@ func (s *Server) handleKnowledgeWorkspace(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
-	workspace, err := s.deps.Preferences.Workspace(r.Context(), strings.TrimSpace(r.PathValue("user_id")))
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
+	workspace, err := s.deps.Preferences.Workspace(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -297,12 +350,16 @@ func (s *Server) handlePreferenceDraft(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var input preference.PreferenceInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	workspace, err := s.deps.Preferences.SavePreferenceDraft(r.Context(), strings.TrimSpace(r.PathValue("user_id")), input)
+	workspace, err := s.deps.Preferences.SavePreferenceDraft(r.Context(), userID, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -315,12 +372,16 @@ func (s *Server) handlePreferenceActivate(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var req activateRevisionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	workspace, err := s.deps.Preferences.ActivatePreference(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(req.RevisionID))
+	workspace, err := s.deps.Preferences.ActivatePreference(r.Context(), userID, strings.TrimSpace(req.RevisionID))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -333,12 +394,16 @@ func (s *Server) handleKnowledgeDraft(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var input preference.KnowledgeInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	workspace, err := s.deps.Preferences.SaveKnowledgeDraft(r.Context(), strings.TrimSpace(r.PathValue("user_id")), input)
+	workspace, err := s.deps.Preferences.SaveKnowledgeDraft(r.Context(), userID, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -351,12 +416,16 @@ func (s *Server) handleKnowledgeActivate(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var req activateRevisionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	workspace, err := s.deps.Preferences.ActivateKnowledge(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
+	workspace, err := s.deps.Preferences.ActivateKnowledge(r.Context(), userID, strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -369,12 +438,16 @@ func (s *Server) handleKnowledgeRollback(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, errText("preference store is not configured"))
 		return
 	}
+	userID := strings.TrimSpace(r.PathValue("user_id"))
+	if _, ok := s.requireSession(w, r, userID); !ok {
+		return
+	}
 	var req activateRevisionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	workspace, err := s.deps.Preferences.RollbackKnowledge(r.Context(), strings.TrimSpace(r.PathValue("user_id")), strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
+	workspace, err := s.deps.Preferences.RollbackKnowledge(r.Context(), userID, strings.TrimSpace(r.PathValue("item_id")), strings.TrimSpace(req.RevisionID))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -383,6 +456,9 @@ func (s *Server) handleKnowledgeRollback(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleFundAnalysis(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireSession(w, r, ""); !ok {
+		return
+	}
 	var req analysisRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -424,6 +500,9 @@ func (s *Server) handleCreateJournal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
 		return
 	}
+	if _, ok := s.requireSession(w, r, ""); !ok {
+		return
+	}
 	var req journalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -442,6 +521,9 @@ func (s *Server) handleJournal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
 		return
 	}
+	if _, ok := s.requireSession(w, r, ""); !ok {
+		return
+	}
 	entry, err := s.deps.Journals.Entry(r.Context(), strings.TrimSpace(r.PathValue("journal_id")))
 	if err != nil {
 		if errors.Is(err, journal.ErrEntryNotFound) {
@@ -457,6 +539,9 @@ func (s *Server) handleJournal(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	if s.deps.Journals == nil {
 		writeError(w, http.StatusServiceUnavailable, errText("journal store is not configured"))
+		return
+	}
+	if _, ok := s.requireSession(w, r, ""); !ok {
 		return
 	}
 	review, err := s.deps.Journals.Review(r.Context(), strings.TrimSpace(r.PathValue("review_id")))
@@ -489,8 +574,8 @@ func withCORS(next http.Handler) http.Handler {
 		if origin := r.Header.Get("Origin"); isLocalOrigin(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
 		}
 		if r.Method == http.MethodOptions && (strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz" || r.URL.Path == "/readyz") {
 			w.WriteHeader(http.StatusNoContent)

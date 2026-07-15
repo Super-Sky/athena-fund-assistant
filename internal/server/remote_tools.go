@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/Super-Sky/athena-fund-assistant/internal/authorization"
 )
 
 const remoteToolContractVersion = "remote_tool_execution.v1"
@@ -55,7 +57,8 @@ type remoteToolExecutionError struct {
 }
 
 type accountOverviewToolArgs struct {
-	UserID string `json:"user_id"`
+	UserID          string `json:"user_id"`
+	ConsentGrantRef string `json:"consent_grant_ref"`
 }
 
 type fundMarketSnapshotToolArgs struct {
@@ -75,13 +78,16 @@ func (s *Server) handleRemoteToolCatalog(w http.ResponseWriter, r *http.Request)
 		"app_id":           "athena-fund-assistant",
 		"items": []remoteToolRegistration{
 			{
-				RegistrationID:   "fund_account_overview_v1",
-				AppID:            "athena-fund-assistant",
-				Name:             "account_overview",
-				Description:      "Read a user's fund assistant account overview, holdings, recent operations, and performance trend.",
-				Parameters:       objectSchema(map[string]any{"user_id": stringSchema("Fund assistant user ID. Defaults to demo-user when omitted.")}, []string{}),
+				RegistrationID: "fund_account_overview_v1",
+				AppID:          "athena-fund-assistant",
+				Name:           "account_overview",
+				Description:    "Read a user's fund assistant account overview, holdings, recent operations, and performance trend.",
+				Parameters: objectSchema(map[string]any{
+					"user_id":           stringSchema("Fund assistant user ID from the authenticated conversation context."),
+					"consent_grant_ref": stringSchema("Opaque read-only consent grant reference from the conversation context."),
+				}, []string{"user_id", "consent_grant_ref"}),
 				Endpoint:         endpoint,
-				ToolScope:        "fund.account.read",
+				ToolScope:        "fund.account.summary.read",
 				Operation:        "read_account_overview",
 				RiskLevel:        "low",
 				SideEffectLevel:  "none",
@@ -90,8 +96,9 @@ func (s *Server) handleRemoteToolCatalog(w http.ResponseWriter, r *http.Request)
 				RetryMaxAttempts: 1,
 				Enabled:          true,
 				Metadata: map[string]any{
-					"data_boundary": "manual_account_and_demo_snapshots",
-					"no_trading":    true,
+					"data_boundary":   "manual_account_and_demo_snapshots",
+					"no_trading":      true,
+					"required_scopes": []string{string(authorization.ScopeAccountSummaryRead), string(authorization.ScopeHoldingSnapshotRead)},
 				},
 			},
 			{
@@ -130,6 +137,9 @@ func (s *Server) handleRemoteToolExecution(w http.ResponseWriter, r *http.Reques
 		writeRemoteToolError(w, http.StatusBadRequest, req, "contract_version_mismatch", "remote tool request contract_version mismatch", false)
 		return
 	}
+	if !s.requireRemoteService(w, r, req) {
+		return
+	}
 	switch strings.TrimSpace(req.ToolName) {
 	case "account_overview":
 		s.executeAccountOverviewTool(w, r, req)
@@ -151,8 +161,47 @@ func (s *Server) executeAccountOverviewTool(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	userID := strings.TrimSpace(args.UserID)
-	if userID == "" {
+	grantRef := strings.TrimSpace(args.ConsentGrantRef)
+	if s.deps.Authorization == nil && userID == "" {
 		userID = "demo-user"
+	}
+	if userID == "" {
+		writeRemoteToolError(w, http.StatusBadRequest, req, "user_id_required", "user_id is required", false)
+		return
+	}
+	if s.deps.Authorization != nil && grantRef == "" {
+		writeRemoteToolAuthorizationError(w, req, authorization.AuthorizationDecision{
+			Code:  authorization.DenialMissingGrant,
+			Scope: authorization.ScopeAccountSummaryRead,
+		})
+		return
+	}
+	decisions := make([]authorization.AuthorizationDecision, 0, 2)
+	for _, scope := range []authorization.Scope{authorization.ScopeAccountSummaryRead, authorization.ScopeHoldingSnapshotRead} {
+		if s.deps.Authorization == nil {
+			break
+		}
+		decision, err := s.deps.Authorization.AuthorizeGrant(r.Context(), authorization.GrantAuthorizationRequest{
+			GrantRef: grantRef,
+			Subject:  userID,
+			Audience: athenaAudience,
+			Scope:    scope,
+		})
+		if err != nil {
+			code, ok := authorizationDenied(err)
+			if !ok {
+				writeRemoteToolError(w, http.StatusInternalServerError, req, "authorization_check_failed", "account authorization check failed", true)
+				return
+			}
+			decision.Code = code
+			decision.Scope = scope
+			decision.GrantRef = grantRef
+		}
+		if !decision.Allowed {
+			writeRemoteToolAuthorizationError(w, req, decision)
+			return
+		}
+		decisions = append(decisions, decision)
 	}
 	overview, err := s.deps.Accounts.Overview(r.Context(), userID)
 	if err != nil {
@@ -163,8 +212,10 @@ func (s *Server) executeAccountOverviewTool(w http.ResponseWriter, r *http.Reque
 		"tool":     "account_overview",
 		"overview": overview,
 		"safety": map[string]any{
-			"no_auto_trading": true,
-			"read_only":       true,
+			"no_auto_trading":   true,
+			"read_only":         true,
+			"consent_grant_ref": grantRef,
+			"consent_revision":  highestAuthorizationRevision(decisions),
 		},
 	})
 }
@@ -231,6 +282,40 @@ func writeRemoteToolError(w http.ResponseWriter, status int, req remoteToolExecu
 			"app_id": "athena-fund-assistant",
 		},
 	})
+}
+
+func writeRemoteToolAuthorizationError(w http.ResponseWriter, req remoteToolExecutionRequest, decision authorization.AuthorizationDecision) {
+	code := decision.Code
+	if code == "" {
+		code = authorization.DenialMissingGrant
+	}
+	writeJSON(w, http.StatusForbidden, remoteToolExecutionResponse{
+		ContractVersion: remoteToolContractVersion,
+		RequestID:       strings.TrimSpace(req.RequestID),
+		ToolCallID:      strings.TrimSpace(req.ToolCallID),
+		Status:          "error",
+		Error: &remoteToolExecutionError{
+			Code:    "authorization_denied",
+			Message: "read-only account consent denied",
+		},
+		Metadata: map[string]any{
+			"app_id":             "athena-fund-assistant",
+			"authorization_code": code,
+			"consent_grant_ref":  decision.GrantRef,
+			"consent_revision":   decision.Revision,
+			"required_scope":     decision.Scope,
+		},
+	})
+}
+
+func highestAuthorizationRevision(decisions []authorization.AuthorizationDecision) int64 {
+	var revision int64
+	for _, decision := range decisions {
+		if decision.Revision > revision {
+			revision = decision.Revision
+		}
+	}
+	return revision
 }
 
 func objectSchema(properties map[string]any, required []string) map[string]any {

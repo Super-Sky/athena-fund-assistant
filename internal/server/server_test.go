@@ -2,15 +2,18 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
 	"github.com/Super-Sky/athena-fund-assistant/internal/athena"
+	"github.com/Super-Sky/athena-fund-assistant/internal/authorization"
 	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -24,13 +27,13 @@ func TestFundAnalysisAndJournalWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
-	}).Routes()
+	}).Handler
 
 	analysis := analysisRequest{
 		InstrumentCode: "510300",
@@ -109,13 +112,13 @@ func TestCORSPreflightForLocalWeb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
-	}).Routes()
+	}).Handler
 
 	req := httptest.NewRequest(http.MethodOptions, "/api/analysis/fund", nil)
 	req.Header.Set("Origin", "http://127.0.0.1:5173")
@@ -135,13 +138,13 @@ func TestAccountOverviewAndManualHoldingWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
-	}).Routes()
+	}).Handler
 
 	overviewRR := httptest.NewRecorder()
 	overviewReq := httptest.NewRequest(http.MethodGet, "/api/accounts/demo-user/overview", nil)
@@ -205,13 +208,13 @@ func TestConversationWorkspaceWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
-	}).Routes()
+	}).Handler
 
 	skillsRR := httptest.NewRecorder()
 	srv.ServeHTTP(skillsRR, httptest.NewRequest(http.MethodGet, "/api/conversations/skills", nil))
@@ -288,13 +291,14 @@ func TestRemoteToolCatalogAndExecution(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	harness := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
-	}).Routes()
+	})
+	srv := harness.Handler
 
 	catalogRR := httptest.NewRecorder()
 	catalogReq := httptest.NewRequest(http.MethodGet, "/internal/tools/catalog?base_url=http://127.0.0.1:8081", nil)
@@ -323,7 +327,7 @@ func TestRemoteToolCatalogAndExecution(t *testing.T) {
 		RegistrationID:  "fund_account_overview_v1",
 		AppID:           "athena-fund-assistant",
 		ToolName:        "account_overview",
-		Arguments:       json.RawMessage(`{"user_id":"demo-user"}`),
+		Arguments:       mustJSON(t, accountOverviewToolArgs{UserID: "demo-user", ConsentGrantRef: harness.Grant.Ref}),
 		Attempt:         1,
 	})
 	if overviewRR.Code != http.StatusOK {
@@ -404,14 +408,14 @@ func TestConversationMessageStartsAthenaRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
 		Athena:        athena.MockClient{},
-	}).Routes()
+	}).Handler
 
 	createRR := performJSON(t, srv, http.MethodPost, "/api/conversations", createConversationRequest{
 		UserID:  "demo-user",
@@ -448,14 +452,14 @@ func TestPreferenceKnowledgeWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new conversation store: %v", err)
 	}
-	srv := New(Dependencies{
+	srv := newAuthenticatedTestHarness(t, Dependencies{
 		Provider:      data.NewMockProvider(),
 		DecisionMaker: decision.NewEngine(),
 		Journals:      journal.NewMemoryStore(),
 		Accounts:      account.NewMemoryStore(),
 		Conversations: conversations,
 		Preferences:   preference.NewMemoryStore(),
-	}).Routes()
+	}).Handler
 
 	workspaceRR := httptest.NewRecorder()
 	srv.ServeHTTP(workspaceRR, httptest.NewRequest(http.MethodGet, "/api/users/demo-user/knowledge", nil))
@@ -519,6 +523,49 @@ func TestPreferenceKnowledgeWorkflow(t *testing.T) {
 	if !found {
 		t.Fatalf("activated item not found: %#v", activated.Items)
 	}
+}
+
+type authenticatedTestHarness struct {
+	Handler http.Handler
+	Grant   authorization.ConsentGrant
+}
+
+func newAuthenticatedTestHarness(t *testing.T, deps Dependencies) authenticatedTestHarness {
+	t.Helper()
+	store := authorization.NewMemoryStore()
+	service := authorization.NewService(store)
+	session, err := service.IssueSession(context.Background(), "demo-user", time.Hour)
+	if err != nil {
+		t.Fatalf("issue test session: %v", err)
+	}
+	grant, err := service.CreateGrant(context.Background(), authorization.CreateGrantRequest{
+		Subject:  "demo-user",
+		Audience: athenaAudience,
+		Scopes: []authorization.Scope{
+			authorization.ScopeAccountSummaryRead,
+			authorization.ScopeHoldingSnapshotRead,
+		},
+		ExpiresAt: time.Now().UTC().Add(time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create test consent grant: %v", err)
+	}
+	deps.Authorization = service
+	deps.LocalAuthSubject = "demo-user"
+	deps.RemoteToolToken = "server-test-service-token"
+	routes := New(deps).Routes()
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" {
+			switch {
+			case r.URL.Path == "/internal/tools/execute":
+				r.Header.Set("Authorization", "Bearer server-test-service-token")
+			case strings.HasPrefix(r.URL.Path, "/api/"):
+				r.Header.Set("Authorization", "Bearer "+session.Token)
+			}
+		}
+		routes.ServeHTTP(w, r)
+	})
+	return authenticatedTestHarness{Handler: handler, Grant: grant}
 }
 
 func performJSON(t *testing.T, handler http.Handler, method, path string, body any) *httptest.ResponseRecorder {

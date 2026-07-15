@@ -38,7 +38,7 @@ yarn build
 - `nginx.conf`
   - Container runtime config that serves the built app and proxies API calls to the `api` service.
 - `src/main.tsx`
-  - Implements the MVP research workflow: account dashboard, Agent workspace with skill/upload controls, profile and holding input, analysis call, strategy cards, trace display, and journal creation.
+  - Implements local session bootstrap, explicit read-only consent, the account dashboard, Agent workspace with skill/upload controls, profile and holding input, analysis, strategy cards, trace display, and journal creation.
 - `src/styles.css`
   - Defines the responsive operational UI styling and CSS-only icon system.
 - `src/vite-env.d.ts`

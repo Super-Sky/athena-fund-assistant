@@ -10,6 +10,8 @@ This directory contains fund assistant application modules. Business objects liv
   - Account dashboard store boundary and local demo read model.
 - `athena/`
   - App-side Athena Agent Run client facade with HTTP and mock implementations.
+- `authorization/`
+  - Bearer sessions, revisioned read-only consent grants, PostgreSQL persistence, and redacted authorization audit events.
 - `conversation/`
   - Agent workspace session, message, attachment metadata, upload, and trace boundary.
 - `data/`

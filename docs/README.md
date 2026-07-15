@@ -16,6 +16,10 @@ Existing single-language planning documents remain as seed drafts until they are
 
 ## Planning Docs
 
+- `features/feature-read-only-account-consent.zh-CN.md`
+  - 用户会话、只读 consent grant、scope、撤销、审计与 Athena 服务身份边界中文说明。
+- `features/feature-read-only-account-consent.en-US.md`
+  - English description of user sessions, read-only consent grants, scopes, revocation, audit, and the Athena service-identity boundary.
 - `features/feature-fund-assistant-web.zh-CN.md`
   - 基金助手 Web MVP 当前实现的中文说明、边界和验收证据。
 - `features/feature-fund-assistant-web.en-US.md`

@@ -313,6 +313,31 @@ type KnowledgeWorkspace = {
   audit: KnowledgeAuditEvent[];
 };
 
+type AuthorizationSession = {
+  ref: string;
+  subject: string;
+  created_at: string;
+  expires_at: string;
+  revoked_at?: string;
+};
+
+type BearerSession = {
+  token: string;
+  session: AuthorizationSession;
+};
+
+type ConsentGrant = {
+  ref: string;
+  subject: string;
+  audience: string;
+  scopes: string[];
+  revision: number;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+  revoked_at?: string;
+};
+
 type InstrumentPreset = {
   code: string;
   name: string;
@@ -325,6 +350,8 @@ type InstrumentPreset = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const LOCAL_USER_ID = "demo-user";
+const ACCOUNT_READ_SCOPES = ["fund.account.summary.read", "fund.holding.snapshot.read"];
 
 const presets: InstrumentPreset[] = [
   {
@@ -393,6 +420,8 @@ function App() {
   const [skills, setSkills] = useState<ConversationSkill[]>([]);
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeWorkspace | null>(null);
+  const [authSession, setAuthSession] = useState<AuthorizationSession | null>(null);
+  const [consents, setConsents] = useState<ConsentGrant[]>([]);
   const [knowledgeDraft, setKnowledgeDraft] = useState({
     category: "review_rule",
     content: "When volatility is above 18%, require a seven-day review before adding exposure.",
@@ -407,17 +436,52 @@ function App() {
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
   const [savingKnowledge, setSavingKnowledge] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedOption = useMemo(
     () => analysis?.decision_matrix.options.find((option) => option.id === selectedOptionID) ?? null,
     [analysis, selectedOptionID]
   );
+  const activeConsent = useMemo(
+    () =>
+      consents.find(
+        (grant) =>
+          !grant.revoked_at &&
+          new Date(grant.expires_at).getTime() > Date.now() &&
+          ACCOUNT_READ_SCOPES.every((scope) => grant.scopes.includes(scope))
+      ) ?? null,
+    [consents]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    bootstrapLocalSession()
+      .then((session) => {
+        if (!cancelled) {
+          setAuthSession(session);
+        }
+        return fetchJSON<{ items: ConsentGrant[] }>("/api/consents", { method: "GET" });
+      })
+      .then((response) => {
+        if (!cancelled) {
+          setConsents(response.items);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingAccount(true);
-    fetchJSON<AccountOverview>("/api/accounts/demo-user/overview", { method: "GET" })
+    fetchJSON<AccountOverview>(`/api/accounts/${LOCAL_USER_ID}/overview`, { method: "GET" })
       .then((response) => {
         if (!cancelled) {
           setAccountOverview(response);
@@ -440,7 +504,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchJSON<KnowledgeWorkspace>("/api/users/demo-user/knowledge", { method: "GET" })
+    fetchJSON<KnowledgeWorkspace>(`/api/users/${LOCAL_USER_ID}/knowledge`, { method: "GET" })
       .then((response) => {
         if (!cancelled) {
           setKnowledge(response);
@@ -549,7 +613,7 @@ function App() {
       body: JSON.stringify({
         skill_id: skillID,
         title: "日常基金 Agent 工作台",
-        user_id: "demo-user"
+        user_id: LOCAL_USER_ID
       })
     });
   }
@@ -571,8 +635,8 @@ function App() {
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("user_id", "demo-user");
-      const response = await fetch(`${API_BASE}/api/conversations/${conversation.session.id}/attachments`, {
+      form.append("user_id", LOCAL_USER_ID);
+      const response = await fetchWithSession(`/api/conversations/${conversation.session.id}/attachments`, {
         body: form,
         method: "POST"
       });
@@ -604,6 +668,7 @@ function App() {
         body: JSON.stringify({
           attachment_ids: pendingAttachmentIDs,
           content: chatInput,
+          consent_grant_ref: activeConsent?.ref ?? "",
           role: "user",
           skill_id: selectedSkillID
         })
@@ -621,10 +686,10 @@ function App() {
     setSavingKnowledge(true);
     setError(null);
     try {
-      const response = await fetchJSON<KnowledgeWorkspace>("/api/users/demo-user/knowledge/drafts", {
+      const response = await fetchJSON<KnowledgeWorkspace>(`/api/users/${LOCAL_USER_ID}/knowledge/drafts`, {
         method: "POST",
         body: JSON.stringify({
-          author: "demo-user",
+          author: LOCAL_USER_ID,
           category: knowledgeDraft.category,
           confidence: 0.72,
           content: knowledgeDraft.content,
@@ -646,7 +711,7 @@ function App() {
     setSavingKnowledge(true);
     setError(null);
     try {
-      const response = await fetchJSON<KnowledgeWorkspace>(`/api/users/demo-user/knowledge/${itemID}/activate`, {
+      const response = await fetchJSON<KnowledgeWorkspace>(`/api/users/${LOCAL_USER_ID}/knowledge/${itemID}/activate`, {
         method: "POST",
         body: JSON.stringify({ revision_id: revisionID })
       });
@@ -655,6 +720,43 @@ function App() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSavingKnowledge(false);
+    }
+  }
+
+  async function createConsent() {
+    setSavingConsent(true);
+    setError(null);
+    try {
+      await fetchJSON<ConsentGrant>("/api/consents", {
+        method: "POST",
+        body: JSON.stringify({ audience: "athena-runtime", scopes: ACCOUNT_READ_SCOPES })
+      });
+      const response = await fetchJSON<{ items: ConsentGrant[] }>("/api/consents", { method: "GET" });
+      setConsents(response.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingConsent(false);
+    }
+  }
+
+  async function revokeConsent() {
+    if (!activeConsent) {
+      return;
+    }
+    setSavingConsent(true);
+    setError(null);
+    try {
+      await fetchJSON<ConsentGrant>(`/api/consents/${activeConsent.ref}/revoke`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const response = await fetchJSON<{ items: ConsentGrant[] }>("/api/consents", { method: "GET" });
+      setConsents(response.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingConsent(false);
     }
   }
 
@@ -671,6 +773,14 @@ function App() {
           <StatusPill icon="check" label="只读建议" tone="green" />
         </div>
       </header>
+
+      <AuthorizationPanel
+        activeConsent={activeConsent}
+        busy={savingConsent}
+        onCreate={createConsent}
+        onRevoke={revokeConsent}
+        session={authSession}
+      />
 
       <AccountDashboard overview={accountOverview} loading={loadingAccount} />
 
@@ -914,6 +1024,52 @@ function AccountDashboard({ loading, overview }: { loading: boolean; overview: A
           ))}
         </div>
       </div>
+    </section>
+  );
+}
+
+function AuthorizationPanel({
+  activeConsent,
+  busy,
+  onCreate,
+  onRevoke,
+  session
+}: {
+  activeConsent: ConsentGrant | null;
+  busy: boolean;
+  onCreate: () => void;
+  onRevoke: () => void;
+  session: AuthorizationSession | null;
+}) {
+  return (
+    <section className="authorization-band" aria-label="identity and read-only consent">
+      <div className="authorization-identity">
+        <PanelTitle icon="shield" title="身份与授权" caption="账户摘要与持仓快照" />
+        <div className="authorization-state">
+          <span className={session ? "state-dot active" : "state-dot"} />
+          <strong>{session ? session.subject : "会话初始化中"}</strong>
+          <small>{session ? shortReference(session.ref) : "-"}</small>
+        </div>
+      </div>
+      <div className="authorization-scopes" aria-label="read-only scopes">
+        {ACCOUNT_READ_SCOPES.map((scope) => (
+          <span className={activeConsent ? "tag evidence" : "tag warning"} key={scope}>
+            {scope === "fund.account.summary.read" ? "账户摘要" : "持仓快照"}
+          </span>
+        ))}
+        <span className="authorization-revision">
+          {activeConsent ? `${shortReference(activeConsent.ref)} · rev ${activeConsent.revision}` : "未授权"}
+        </span>
+      </div>
+      <button
+        className="secondary-action authorization-action"
+        disabled={!session || busy}
+        onClick={activeConsent ? onRevoke : onCreate}
+        type="button"
+      >
+        <Icon name={activeConsent ? "alert" : "check"} />
+        {busy ? "处理中" : activeConsent ? "撤销授权" : "授权只读访问"}
+      </button>
     </section>
   );
 }
@@ -1351,19 +1507,73 @@ function TagList({ empty, items, tone }: { empty: string; items: string[]; tone:
   );
 }
 
-async function fetchJSON<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers ?? {})
-    }
+let activeBearerToken = "";
+let sessionBootstrap: Promise<AuthorizationSession> | null = null;
+
+async function bootstrapLocalSession(force = false): Promise<AuthorizationSession> {
+  if (force) {
+    activeBearerToken = "";
+    sessionBootstrap = null;
+  }
+  if (sessionBootstrap) {
+    return sessionBootstrap;
+  }
+  sessionBootstrap = issueLocalSession().catch((error) => {
+    sessionBootstrap = null;
+    throw error;
   });
-  const payload = await response.json();
+  return sessionBootstrap;
+}
+
+async function issueLocalSession(): Promise<AuthorizationSession> {
+  const response = await fetch(`${API_BASE}/api/auth/sessions`, {
+    body: JSON.stringify({ user_id: LOCAL_USER_ID }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST"
+  });
+  const payload = (await response.json()) as BearerSession & { error?: string };
+  if (!response.ok || !payload.token) {
+    throw new Error(payload.error ?? `session request failed with ${response.status}`);
+  }
+  activeBearerToken = payload.token;
+  return payload.session;
+}
+
+async function fetchWithSession(path: string, init: RequestInit, retry = true): Promise<Response> {
+  await bootstrapLocalSession();
+  const headers = new Headers(init.headers);
+  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  headers.set("Authorization", `Bearer ${activeBearerToken}`);
+  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  if (response.status === httpUnauthorized && retry) {
+    await bootstrapLocalSession(true);
+    return fetchWithSession(path, init, false);
+  }
+  return response;
+}
+
+async function fetchJSON<T>(path: string, init: RequestInit): Promise<T> {
+  const response = await fetchWithSession(path, init);
+  const text = await response.text();
+  let payload: (T & { error?: string }) | undefined;
+  if (text) {
+    payload = JSON.parse(text) as T & { error?: string };
+  }
   if (!response.ok) {
-    throw new Error(payload.error ?? `request failed with ${response.status}`);
+    throw new Error(payload?.error ?? `request failed with ${response.status}`);
   }
   return payload as T;
+}
+
+const httpUnauthorized = 401;
+
+function shortReference(value: string) {
+  if (value.length <= 18) {
+    return value;
+  }
+  return `${value.slice(0, 10)}...${value.slice(-5)}`;
 }
 
 function styleLabel(style: string) {

@@ -24,14 +24,14 @@ This feature moves the fund assistant from a one-off fund analysis page toward a
 - Without `DATABASE_URL`, local runs use the in-memory demo store. Docker / DATABASE_URL environments use the PostgreSQL store.
 - Current account market data is still mock/demo data, with `trace.mock_data_temporary=true`.
 - The app does not store brokerage accounts, brokerage credentials, or order-placement capability.
-- Account authorization sync remains a future read-only direction, so `read_only_sync_available=false`.
+- User sessions and revocable account-read consent are implemented. Real brokerage/account sync remains a future read-only direction, so `read_only_sync_available=false`.
 - CNY / USD holdings use `fx_to_base` to normalize into the account base currency instead of mixing US and China timelines without provenance.
 
 ## Follow-Up
 
 - Link the already persistent journal/review records to accounts and holdings.
 - Connect account holdings to real data providers and replace mock/demo prices and FX.
-- Integrate with Athena remote tools so the Agent can read account overview and write decision journals.
+- Complete consent-protected cross-service account reads after Athena #24 adds service-identity header injection.
 
 ## Verification
 

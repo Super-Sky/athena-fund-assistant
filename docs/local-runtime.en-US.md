@@ -9,7 +9,7 @@ This document records the current local runtime path for the athena-fund-assista
 - PostgreSQL
 - Redis
 
-The API defaults to the mock provider. The account dashboard and decision journal use PostgreSQL when `DATABASE_URL` exists and fall back to explicit in-memory demo stores otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
+The API defaults to the mock provider. The account dashboard, decision journal, sessions, consent grants, and authorization audits use PostgreSQL when `DATABASE_URL` exists and fall back to explicit in-memory demo stores otherwise. Redis is already present in the Docker topology so later caching, rate limiting, and async refresh work can attach without changing deployment shape. The Athena client uses a local mock when `ATHENA_BASE_URL` is unset and calls the external Athena Agent Run API when configured.
 
 The API runs provider validation before listening. The current mock provider must pass fund, equity, index, USD/CNY FX, and US market-calendar probes before the server starts. The CSV provider must pass China ETF / index, US ETF / equity / index, USD/CNY FX, and China plus US market-calendar probes.
 
@@ -34,7 +34,24 @@ curl http://127.0.0.1:8081/readyz
 Account dashboard check:
 
 ```bash
-curl http://127.0.0.1:8081/api/accounts/demo-user/overview
+SESSION_TOKEN="$(
+  curl -fsS -X POST http://127.0.0.1:8081/api/auth/sessions \
+    -H 'Content-Type: application/json' \
+    -d '{"user_id":"demo-user"}' \
+    | node -pe 'JSON.parse(require("fs").readFileSync(0, "utf8")).token'
+)"
+
+curl -H "Authorization: Bearer ${SESSION_TOKEN}" \
+  http://127.0.0.1:8081/api/accounts/demo-user/overview
+```
+
+Create read-only account consent:
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8081/api/consents \
+  -H "Authorization: Bearer ${SESSION_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d '{"audience":"athena-runtime","scopes":["fund.account.summary.read","fund.holding.snapshot.read"]}'
 ```
 
 Agent workspace skill check:
@@ -52,7 +69,10 @@ curl 'http://127.0.0.1:8081/internal/tools/catalog?base_url=http://127.0.0.1:808
 Connect real Athena:
 
 ```bash
-ATHENA_BASE_URL=http://127.0.0.1:8080 ATHENA_AUTH_TOKEN=optional-token go run ./cmd/api
+ATHENA_BASE_URL=http://127.0.0.1:8080 \
+ATHENA_AUTH_TOKEN=optional-token \
+ATHENA_FUND_REMOTE_TOOL_TOKEN=separate-service-token \
+go run ./cmd/api
 ```
 
 Use user-supplied CSV data as the fallback provider:
@@ -66,15 +86,15 @@ go run ./cmd/api
 
 The CSV provider is a local MVP / demo fallback, not a licensed real-time market-data feed. Every CSV row must preserve `source`, `provider`, `fetched_at`, `market_time`, `timezone`, `delay`, `license_terms`, `confidence`, and `schema_version`. The sample file uses `user_supplied_csv_for_local_mvp_not_licensed_live_feed` to make the license boundary explicit.
 
-## Dual-Service Smoke
+## Dual-Service Smoke (Waiting For Athena #24)
 
-This repository includes a local smoke script that starts Athena, the fund assistant, and a fake OpenAI-compatible model to verify the full local contract:
+The historical local script starts Athena, the fund assistant, and a fake OpenAI-compatible model. After read-only consent, the script must wait for Athena #24 service-identity header injection before it can pass the complete path again:
 
 ```bash
 ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```
 
-The script verifies:
+The script's target checks are:
 
 - Athena `/healthz` and fund assistant `/healthz` are reachable.
 - The fund assistant `/internal/tools/catalog` emits `account_overview` / `fund_market_snapshot` remote tool registrations.
@@ -83,13 +103,13 @@ The script verifies:
 - Athena calls back into the fund assistant `/internal/tools/execute` through `remote_tool_execution.v1`.
 - A fund conversation message gets an `athena_agent_run=ok` trace with `run_status=completed`, `tool_call_count=1`, and `output_present=true`.
 
-This smoke does not require a real model API key. It validates the dual-service contract, tool registry, tool callback, and trace writeback. Real model providers should still be configured through Athena model management.
+This smoke does not require a real model API key. With read-only consent enabled, a complete remote callback also requires Athena to inject a separate service identity securely; [Super-Sky/Athena#24](https://github.com/Super-Sky/Athena/issues/24) tracks that capability. Until #24 lands and the smoke scripts are synchronized, historical smoke results are not evidence of current production-grade service authentication.
 
 PostgreSQL store integration test:
 
 ```bash
 ATHENA_FUND_PG_TEST_DSN='postgres://athena_fund:athena_fund@127.0.0.1:5433/athena_fund?sslmode=disable' \
-  go test ./internal/account ./internal/journal -run 'Test(PostgresStoreOverviewAndReplaceHoldings|PostgresStorePersistence)' -count=1
+  go test ./internal/account ./internal/journal ./internal/authorization -count=1
 ```
 
 ## Run The Web App Directly
@@ -134,13 +154,13 @@ Default ports:
 
 The dual-service overlay points the fund assistant API at `ATHENA_BASE_URL=http://athena-api:8080` and enables the CSV provider by default with `ATHENA_FUND_PROVIDER=csv` plus `ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`. CSV data remains a local MVP / demo fallback, not a licensed real-time market-data feed.
 
-End-to-end Docker smoke:
+End-to-end Docker smoke, after Athena #24 lands and the script is synchronized:
 
 ```bash
 ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh
 ```
 
-The script builds and starts the dual-service Docker topology, registers the fake model and fund remote tools, then verifies Athena Agent Run, the remote tool callback, fund conversation trace writeback, and CSV provider decision trace. The first Athena image build can be slow; later runs reuse the Docker cache.
+The script is intended to build and start the dual-service Docker topology, register the fake model and fund remote tools, then verify service-authenticated and consent-protected Agent Run callbacks, fund conversation trace writeback, and CSV provider decision trace. The first Athena image build can be slow; later runs reuse the Docker cache.
 
 ## Current Boundaries
 
@@ -148,6 +168,9 @@ The script builds and starts the dual-service Docker topology, registers the fak
 - The API reads `ATHENA_FUND_UPLOAD_DIR` as the attachment upload directory. If unset, the system temp directory is used.
 - The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, while `csv` reads `ATHENA_FUND_CSV_PATH`.
 - The API reads `ATHENA_BASE_URL` and optional `ATHENA_AUTH_TOKEN`; when unset, it uses the mock Athena client for single-service demos.
+- The API reads `ATHENA_FUND_LOCAL_AUTH_SUBJECT` as the only subject accepted by the local session issuer; it defaults to `demo-user`.
+- The API reads `ATHENA_FUND_REMOTE_TOOL_TOKEN` to validate the Bearer service identity on Athena callbacks. Production deployments must inject it from a secret manager or Docker secret and must not commit a real value.
 - The dual-service Docker overlay also reads `ATHENA_REPO`, `ATHENA_DUAL_API_PORT`, `ATHENA_FAKE_MODEL_PORT`, `ATHENA_FUND_PROVIDER`, and `ATHENA_FUND_CSV_PATH`.
 - Mock / CSV data must continue to be marked as temporary or user-supplied in UI / trace output.
 - The current web app still calls only the fund assistant API. The fund assistant API starts an Agent Run through the Athena client after user messages and exposes read-only remote business tools through `/internal/tools/execute` for Athena callbacks.
+- The web app keeps the current local session token only in memory. Agent Runs, tool arguments, and trace metadata receive only the non-secret `consent_grant_ref`.

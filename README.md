@@ -21,6 +21,7 @@ The first version focuses on funds and ETFs:
 - decision journal
 - review tasks
 - data-source and reasoning trace
+- local bearer session plus revocable read-only account consent
 - Athena runtime integration plan
 
 The first version intentionally excludes:
@@ -39,6 +40,8 @@ The assistant should provide clear, actionable scenarios, not vague disclaimers.
 
 - `docs/api.zh-CN.md`
 - `docs/api.en-US.md`
+- `docs/features/feature-read-only-account-consent.zh-CN.md`
+- `docs/features/feature-read-only-account-consent.en-US.md`
 - `docs/product-boundary.md`
 - `docs/architecture.md`
 - `docs/mvp-plan.md`
@@ -57,11 +60,12 @@ This repository now contains the first local Go API slice for the fund assistant
 - Agent conversation workspace with skill selection and attachment metadata
 - Athena Agent Run client facade with mock and HTTP modes
 - Athena remote business tool callbacks for read-only account and market data
+- hashed bearer sessions, revisioned read-only consent grants, and redacted authorization audits
 - mock fund / ETF / US market data provider
 - conservative / balanced / aggressive decision matrix
 - durable decision journal and review task when `DATABASE_URL` is configured
 
-The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard and decision journal use PostgreSQL when `DATABASE_URL` is configured and fall back to explicit in-memory demo stores otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client, read-only remote business tools, and a dual-service smoke path. Real data providers and persistent preference/knowledge storage remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard, decision journal, sessions, consent grants, and authorization audits use PostgreSQL when `DATABASE_URL` is configured and fall back to explicit in-memory demo stores otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client and read-only remote business tools. Production-grade outbound service authentication for the full dual-service callback remains tracked in `Super-Sky/Athena#24`. Real data providers and persistent preference/knowledge storage remain active MVP work.
 
 ## Local Run
 

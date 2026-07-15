@@ -27,12 +27,15 @@ func (s *Server) startAthenaRunForMessage(ctx context.Context, conversationID st
 		Status:  "ok",
 		Summary: "Athena agent run accepted the workspace message.",
 		Metadata: map[string]string{
-			"run_id":          result.RunID,
-			"run_status":      status,
-			"trace_available": fmt.Sprintf("%t", result.TraceAvailable),
-			"stop_reason":     result.StopReason,
-			"tool_call_count": fmt.Sprintf("%d", len(result.ToolCalls)),
-			"output_present":  fmt.Sprintf("%t", strings.TrimSpace(result.Output) != ""),
+			"run_id":                result.RunID,
+			"run_status":            status,
+			"trace_available":       fmt.Sprintf("%t", result.TraceAvailable),
+			"stop_reason":           result.StopReason,
+			"tool_call_count":       fmt.Sprintf("%d", len(result.ToolCalls)),
+			"output_present":        fmt.Sprintf("%t", strings.TrimSpace(result.Output) != ""),
+			"consent_contract":      "read_only_grant_ref_v1",
+			"consent_grant_ref":     strings.TrimSpace(req.ConsentGrantRef),
+			"authorization_subject": strings.TrimSpace(req.UserID),
 		},
 	})
 }
@@ -43,6 +46,8 @@ func buildAthenaRunRequest(conversationID string, req addConversationMessageRequ
 		skillID = "fund_research"
 	}
 	attachmentIDs := compactStrings(req.AttachmentIDs)
+	userID := strings.TrimSpace(req.UserID)
+	consentGrantRef := strings.TrimSpace(req.ConsentGrantRef)
 	return athena.StartRunRequest{
 		Goal: strings.TrimSpace(req.Content),
 		Success: []string{
@@ -66,19 +71,22 @@ func buildAthenaRunRequest(conversationID string, req addConversationMessageRequ
 				AssetID:   "conversation." + conversationID,
 				AssetType: "fund_assistant_conversation",
 				Content: map[string]any{
-					"conversation_id": conversationID,
-					"skill_id":        skillID,
-					"attachment_ids":  attachmentIDs,
+					"conversation_id":   conversationID,
+					"skill_id":          skillID,
+					"attachment_ids":    attachmentIDs,
+					"user_id":           userID,
+					"consent_grant_ref": consentGrantRef,
 				},
 				Metadata: map[string]any{
 					"attachment_content_policy": "metadata_only_until_parser_confirms",
+					"consent_contract":          "read_only_grant_ref_v1",
 				},
 			},
 		},
 		Tools:        fundAthenaToolDeclarations(),
 		EnabledTools: fundAthenaToolNames(),
 		MemoryScope: map[string]any{
-			"user_id": "demo-user",
+			"user_id": userID,
 			"scope":   "fund_assistant_mvp",
 		},
 		Governance: []string{
@@ -89,10 +97,12 @@ func buildAthenaRunRequest(conversationID string, req addConversationMessageRequ
 		AppID:        "athena-fund-assistant",
 		AppSessionID: conversationID,
 		InputPayload: map[string]any{
-			"role":           strings.TrimSpace(req.Role),
-			"skill_id":       skillID,
-			"attachment_ids": attachmentIDs,
-			"message":        strings.TrimSpace(req.Content),
+			"role":              strings.TrimSpace(req.Role),
+			"skill_id":          skillID,
+			"attachment_ids":    attachmentIDs,
+			"message":           strings.TrimSpace(req.Content),
+			"user_id":           userID,
+			"consent_grant_ref": consentGrantRef,
 		},
 	}
 }
@@ -109,12 +119,17 @@ func fundAthenaToolDeclarations() []athena.ToolDeclaration {
 				Name:        "account_overview",
 				Description: "Read the fund assistant account overview as read-only context.",
 				Parameters: objectSchema(map[string]any{
-					"user_id": stringSchema("Fund assistant user ID. Defaults to demo-user when omitted."),
-				}, []string{}),
+					"user_id":           stringSchema("Fund assistant user ID from the authenticated conversation context."),
+					"consent_grant_ref": stringSchema("Opaque read-only consent grant reference from the conversation context."),
+				}, []string{"user_id", "consent_grant_ref"}),
 			},
 			Metadata: map[string]any{
 				"side_effect_level": "none",
-				"tool_scope":        "fund.account.read",
+				"tool_scope":        "fund.account.summary.read",
+				"required_scopes": []string{
+					"fund.account.summary.read",
+					"fund.holding.snapshot.read",
+				},
 			},
 		},
 		{

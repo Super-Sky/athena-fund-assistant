@@ -23,7 +23,7 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - `scripts/smoke_dual_docker.sh`
   - Builds and starts the dual-service Docker topology.
   - Registers the fake model and fund remote tools.
-  - Verifies Athena Agent Run, the remote tool callback, fund conversation trace writeback, and CSV decision trace.
+  - Historically verified Agent Run, remote callbacks, fund trace writeback, and CSV decision trace; after read-only consent, its service-identity step must be synchronized once Athena #24 lands.
 
 ## Boundaries
 
@@ -31,6 +31,7 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - The fake model is only for smoke tests and does not represent real model quality.
 - The CSV provider is only a local fallback and must not masquerade as licensed real-time market data.
 - Payment, subscriptions, brokerage account integration, and automatic trading are out of scope.
+- `ATHENA_FUND_REMOTE_TOOL_TOKEN` must come from local `.env` or a production secret source and no real value may be committed. `Super-Sky/Athena#24` tracks the matching secure outbound header injection.
 
 ## Verification
 

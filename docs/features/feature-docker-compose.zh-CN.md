@@ -23,7 +23,7 @@
 - `scripts/smoke_dual_docker.sh`
   - 构建并启动双服务 Docker 拓扑。
   - 注册 fake 模型和 fund remote tools。
-  - 验证 Athena Agent Run、remote tool callback、fund conversation trace 回写和 CSV 决策 trace。
+  - 历史版本验证 Athena Agent Run、remote tool callback、fund conversation trace 回写和 CSV 决策 trace；只读授权上线后需在 Athena #24 合入后同步服务身份步骤。
 
 ## 边界
 
@@ -31,6 +31,7 @@
 - fake 模型只用于 smoke，不代表真实模型质量。
 - CSV provider 只用于本地兜底，不冒充授权实时行情。
 - 不包含支付、订阅、券商账号集成或自动交易能力。
+- `ATHENA_FUND_REMOTE_TOOL_TOKEN` 必须通过本地 `.env` / production secret 注入，不能提交真实值；Athena 的对应安全 header 注入由 `Super-Sky/Athena#24` 跟踪。
 
 ## 验证
 

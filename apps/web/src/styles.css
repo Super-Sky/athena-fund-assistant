@@ -1017,6 +1017,7 @@ button:active:not(:disabled) {
 }
 
 .topbar,
+.authorization-band,
 .account-dashboard,
 .agent-workspace,
 .knowledge-workspace,
@@ -1027,6 +1028,72 @@ button:active:not(:disabled) {
 .topbar {
   align-items: center;
   margin-bottom: 18px;
+}
+
+.authorization-band {
+  display: grid;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  grid-template-columns: minmax(250px, 0.9fr) minmax(320px, 1.2fr) auto;
+  gap: 18px;
+  margin: 0 auto 16px;
+  padding: 13px 2px;
+}
+
+.authorization-identity,
+.authorization-scopes,
+.authorization-state {
+  display: flex;
+  align-items: center;
+}
+
+.authorization-identity {
+  gap: 18px;
+}
+
+.authorization-state {
+  gap: 7px;
+  min-width: 0;
+}
+
+.authorization-state strong,
+.authorization-state small,
+.authorization-revision {
+  overflow-wrap: anywhere;
+}
+
+.authorization-state strong {
+  font-size: 0.82rem;
+}
+
+.authorization-state small,
+.authorization-revision {
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.state-dot {
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+}
+
+.state-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgb(40 122 91 / 13%);
+}
+
+.authorization-scopes {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.authorization-action {
+  min-height: 38px;
+  white-space: nowrap;
 }
 
 .eyebrow {
@@ -1392,6 +1459,22 @@ textarea:focus {
 
   .topbar {
     gap: 14px;
+  }
+
+  .authorization-band {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .authorization-identity {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .authorization-action {
+    width: 100%;
   }
 
   .status-strip {
