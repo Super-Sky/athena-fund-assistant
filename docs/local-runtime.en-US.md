@@ -91,7 +91,7 @@ This mode validates China public-fund NAV, CSI 300 index, and the SSE calendar b
 This repository includes a local smoke script that starts Athena, the fund assistant, and a fake OpenAI-compatible model to verify the full local contract:
 
 ```bash
-ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```
 
 The script verifies:

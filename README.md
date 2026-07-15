@@ -87,5 +87,5 @@ docker compose up --build
 Dual-service Athena smoke:
 
 ```bash
-ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_service.sh
 ```
