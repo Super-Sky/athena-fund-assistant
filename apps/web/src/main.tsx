@@ -596,7 +596,7 @@ function App() {
     setSendingMessage(true);
     setError(null);
     try {
-      const pendingAttachmentIDs = conversation.attachments
+      const pendingAttachmentIDs = (conversation.attachments ?? [])
         .filter((attachment) => attachment.status === "pending_parse" || attachment.unsupported)
         .map((attachment) => attachment.id);
       const detail = await fetchJSON<ConversationDetail>(`/api/conversations/${conversation.session.id}/messages`, {

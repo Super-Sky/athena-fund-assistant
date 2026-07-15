@@ -119,6 +119,8 @@
 
 响应为 `ConversationDetail`，包含 `session`、`messages`、`attachments` 和 `trace`。
 
+`messages`、`attachments` 和 `trace` 始终返回 JSON 数组；没有记录时返回 `[]`，不会返回 `null`。
+
 ## `GET /api/conversations/{conversation_id}`
 
 读取对话详情、消息、附件 metadata 和 trace timeline。
