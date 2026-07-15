@@ -185,16 +185,32 @@ Acceptance:
 - No brokerage order, trade placement, or write permission is introduced.
 - Decision-journal trace can identify the authorization and data-source metadata used for the analysis.
 
+Current evidence: draft PR `#35` implements local sessions, revisioned read-only consent, revocation, scope enforcement, and redacted authorization audit. Production remote callbacks still depend on Athena `#24` service identity.
+
 ## Issue 31: Financial Agent Evaluation And Release Gate
 
 Add repeatable quality and safety evaluation for fund-analysis workflows.
 
 Acceptance:
 
-- Promptfoo runs deterministic and model-assisted cases locally and in CI.
+- `#31A` runs deterministic fixed cases locally and in CI; `#31B` adds cross-service trace and optional model-assisted signals after Athena trace contracts stabilize.
 - Cases cover stale/missing data, provider failure, unsupported source attribution, guaranteed-return language, single-path conclusions, missing risk/invalidation, unsupported percentages, and unauthorized account access.
 - A failed mandatory case blocks the release path.
 - The evaluation suite consumes Athena trace-safe outputs and fund decision evidence without requiring Athena to own fund business data.
+
+Current evidence: draft PR `#36` implements `#31A`; all three GitHub CI gates pass. `#31B` remains open.
+
+## Issue 37: Governed Attachment Ingestion And Evidence Extraction
+
+Turn attachment metadata from Issue 16 into governed evidence that can safely enter fund analysis.
+
+Acceptance:
+
+- Local development storage and a replaceable S3-compatible adapter implement the same attachment contract.
+- CSV and PDF text parsing preserve file hash, parser/version, page or row citations, authorization, retention, and failure status.
+- OCR remains a governed adapter with explicit unsupported/degraded behavior when unavailable.
+- Untrusted parsing uses an isolated boundary and fails closed without fabricating evidence.
+- Athena receives only authorized context/evidence references and trace-safe summaries, never raw sensitive files in trace.
 
 ## Athena Dependency Issues
 
@@ -210,11 +226,14 @@ The fund assistant depends on these Athena runtime foundation tasks:
 - `Super-Sky/Athena#21`: OpenTelemetry trace projection and optional Langfuse runtime profile.
 - `Super-Sky/Athena#22`: goal-driven execution controls, Redis-backed async-job contract, and stable stop reasons.
 - `Super-Sky/Athena#23`: pgvector-backed governed memory retrieval for business-app context.
+- `Super-Sky/Athena#24`: outbound remote-tool service authentication through secret references.
+- `Super-Sky/Athena#25`: app-facing service authentication, tenant isolation, and run quotas.
 
 ## Follow-Up Sequencing
 
 1. Finish and merge the existing Agent Run / tool / remote-tool stack, then run the dual-service smoke.
-2. In parallel, complete fund `#30` consent / scopes / revocation and Athena `#21A` trace ID, taxonomy, allowlisting, recursive redaction, and sampling.
-3. Implement Athena `#22` goal evaluation, budgets, stop reasons, PostgreSQL state truth, and Redis dispatch while fund `#31A` adds deterministic fixtures and a CI release block.
-4. After the #22 state machine stabilizes, finish Athena `#21B` OTLP / optional Langfuse, then Athena `#23` consent-aware pgvector retrieval and fund `#31B` cross-service trace evaluations.
-5. Continue real-provider admission with user-owned credentials in parallel; wire Redis cache and freshness status only around approved providers.
+2. In parallel, complete fund `#30` consent / scopes / revocation, Athena `#24` outbound callback identity, Athena `#25` app / tenant identity and quotas, and Athena `#21A` trace ID, taxonomy, allowlisting, recursive redaction, and sampling.
+3. Implement Athena `#22` goal evaluation, budgets, stop reasons, PostgreSQL state truth, and Redis dispatch while fund `#31A` enforces deterministic fixtures and a CI release block.
+4. After the #22 state machine stabilizes, finish Athena `#21B` OTLP / optional Langfuse, then Athena `#23` consent-aware and tenant-aware pgvector retrieval and fund `#31B` cross-service trace evaluations.
+5. After fund `#16` attachment metadata and Athena `#22` async states stabilize, implement fund `#37` storage, cited parsing, retention, and governed OCR adapters.
+6. Continue real-provider admission with user-owned credentials in parallel; wire Redis cache and freshness status only around approved providers.

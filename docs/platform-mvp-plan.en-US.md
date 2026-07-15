@@ -23,6 +23,7 @@ Both projects should keep a consistent stack:
 - OpenAI-compatible `tools` / `tool_calls` input and output.
 - Athena canonical tool contract.
 - Tool registry.
+- App / service identity, tenant ownership, scopes, and run quotas.
 - Trace timeline.
 - Memory / context APIs.
 - Governance gate.
@@ -44,6 +45,7 @@ Both projects should keep a consistent stack:
 - Decision journal.
 - Review tasks.
 - Fund business UI.
+- Attachment storage, isolated parsing / OCR, and evidence citations.
 - Financial scenario governance rules.
 - Domain evaluation suites based on real data, user consent, and investment constraints.
 
@@ -156,8 +158,10 @@ This phase uses one acceptance scenario: a user asks whether their portfolio nee
 Deliverables:
 
 - Athena generic agent loop: success criteria, budget, deadline, tool retry, waiting / terminal stop reason, checkpoint / resume.
+- Service identity, app / tenant / subject ownership, scopes, and quotas for app-facing APIs; Athena outbound remote-tool callbacks inject service credentials through secret references.
 - Deliver OpenTelemetry in two slices: first add a unified `trace_id`, seven runtime-trace categories, allowlisting / recursive redaction, and forced sampling; after execution states stabilize, add the `OpenTelemetry Collector` and optional self-hosted `Langfuse` Docker profile.
 - Unified trace and correlation IDs for run / step / model / tool / memory / governance / remote callbacks.
+- Freeze an immutable manifest per run for model / provider, system prompt, skill, tool schema, governance policy, context-asset, and evaluator revisions so runs can be reproduced, evaluated, and audited.
 - Actual Redis integration for cache, concurrency/rate limits, idempotency locks, and async jobs; start with a Go-native queue and evaluate Temporal separately for complex multi-day workflows.
 - A `pgvector` knowledge and memory retrieval slice using PostgreSQL first, without a separate vector database.
 - Generic built-in tools: HTTP fetch, search-provider adapter, calculator, time / market calendar, and file-schema validation. Fund-domain tools remain remotely registered by the fund assistant.
@@ -174,6 +178,7 @@ Deliverables:
 
 - User-account authentication, token/session, read-only data consent, tool scopes, consent revocation, and audit events. Brokerage sync remains read-only and requires separate consent.
 - In-repository `Promptfoo` evaluation configuration and CI commands: block releases with deterministic critical cases first, then add Athena-trace and optional model-assisted evaluations. Cover missing or stale data, tool failure, single-path conclusions, guaranteed-return language, missing risk/invalidation, unsupported percentages, and unauthorized account reads.
+- Attachment pipeline: local development storage plus a replaceable S3-compatible adapter, CSV / PDF text parsing first, and OCR as a governed adapter. File hashes, parser versions, page / row citations, retention, and authorization state must remain traceable.
 - Restricted document parsing, OCR, and web search plugins with governed size, file type, outbound domains, timeout, source, and citations; untrusted execution goes through an isolated sandbox.
 - Keep the model gateway optional: retain the Athena provider abstraction first, then add a LiteLLM profile only when multi-provider routing, virtual keys, or central budgets are justified.
 
@@ -192,7 +197,12 @@ Acceptance:
 | Knowledge retrieval | PostgreSQL + pgvector | Phase 5 | Avoid Qdrant / Milvus / Weaviate replication and operations initially. |
 | LLM gateway | Athena provider abstraction; optional LiteLLM profile | After Phase 6 | Do not add a Python service before multi-tenant routing, virtual keys, or central cost settlement are needed. |
 | Continuous eval | Promptfoo | Phase 6 | Cases live in the fund app but must feed back into Athena runtime contracts. |
-| Auth / secrets | App JWT/OAuth, Docker secrets; external secrets manager later | Phase 6 | Introduce Keycloak / Vault only when enterprise SSO or multi-environment key rotation is concrete. |
+| Runtime identity / tenant | Provider-neutral service verifier + secret references + scoped ownership | Phase 5 | Add Athena inbound app identity, outbound callback identity, and cross-tenant denial first; evaluate Keycloak only for concrete enterprise SSO. |
+| User auth / consent | Fund session + read-only consent / scopes / revocation | Phase 6 | User and brokerage authorization stays in the business app; Athena receives only safe subject and scope data. |
+| Usage / quotas | Athena usage records + Redis counters / locks | Phase 5 | Implement concurrency, rate, token, and cost budgets first; billing and plans are outside the MVP. |
+| Prompt / skill reproducibility | Athena revisioned assets + immutable run manifest | Phase 5 | Reuse the existing skill / system-resource revisions instead of adding a separate Prompt CMS. |
+| Human approval | Eino interrupt / checkpoint + Athena governance | Phase 5 | Cover high-risk tools and missing-input confirmation first; evaluate Temporal only for complex multi-day approvals. |
+| Attachments / artifacts | Fund local storage + S3-compatible adapter + cited extraction | Phase 6 | Do not require MinIO for local MVP; raw business files never enter Athena traces. |
 | Sandbox | Restricted Docker executor | Phase 6 | Enable only for untrusted scripts or complex file processing. |
 | Dedicated vector DB | Do not introduce yet | Later | Create a task only after pgvector capacity, latency, or retrieval quality becomes a measurable bottleneck. |
 
@@ -200,9 +210,10 @@ Acceptance:
 
 1. **Existing Athena integration chain**: `Athena#7` → `#8` → `#9` → `#14` → `#10` → `#11` → `#12`. First complete the generic run, tool, remote callback, built-in tools, memory, trace, and Docker merges plus the dual-service smoke.
 2. **Existing fund business chain**: progress `fund#15`, `#16`, `#17` alongside `fund#10` and `#11`; live providers still require user-owned key/token validation before becoming the default path.
-3. **Parallel safety foundations**: complete identity, read-only consent, scopes, revocation, and remote-tool denial in `fund#30`; in parallel, limit `Athena#21A` to unified `trace_id`, trace taxonomy, allowlisting / recursive redaction, and sampling, without adding Langfuse product behavior.
-4. **Execution and evaluation slice**: build goal evaluation, budgets, stable stop reasons, PostgreSQL state truth, and Redis dispatch in `Athena#22`; add deterministic fixtures and a CI release block in `fund#31A` in parallel.
-5. **Observability and memory closure**: after the #22 state machine stabilizes, connect the OTLP Collector and optional Langfuse profile in `Athena#21B`; make `Athena#23` reuse the `fund#30` ownership / consent contract for pgvector retrieval; then add cross-service trace and optional model-assisted evaluations in `fund#31B`.
+3. **Parallel safety foundations**: complete user identity, read-only consent, scopes, revocation, and remote-tool denial in `fund#30`; add outbound callback service identity in `Athena#24`, app-facing inbound identity, tenant ownership, and quotas in `Athena#25`; in parallel, limit `Athena#21A` to unified `trace_id`, trace taxonomy, allowlisting / recursive redaction, and sampling.
+4. **Execution and evaluation slice**: build goal evaluation, budgets, stable stop reasons, PostgreSQL state truth, and Redis dispatch on the safe trace and identity contracts in `Athena#22`; use deterministic fixtures and a CI release block in `fund#31A` to validate financial-safety rules first.
+5. **Observability and memory closure**: after the #22 state machine stabilizes, connect the OTLP Collector and optional Langfuse profile in `Athena#21B`; make `Athena#23` reuse the `fund#30` / `Athena#25` ownership and consent contracts for pgvector retrieval; then add cross-service trace and optional model-assisted evaluations in `fund#31B`.
+6. **Attachment evidence chain**: after `fund#16` attachment metadata and the `Athena#22` async contract stabilize, `fund#37` delivers storage, parsing, citations, and retention. Complex OCR / sandbox adapters may proceed in parallel but must not block the CSV / PDF text MVP.
 
 These Athena capabilities depend only on generic runtime contracts and cannot read fund tables. Trusted-fund capabilities call Athena through remote tools and do not modify Athena core.
 
@@ -217,7 +228,8 @@ Recommended parallel tracks:
 - `Data Provider Agent`: China fund / ETF and US equity / ETF / index / FX / market-calendar providers.
 - `UI Agent`: fund assistant frontend.
 - `Docker Agent`: dual-service Docker / Compose.
-- `Governance Agent`: financial output governance, data-license markers, and bilingual docs.
+- `Security / Governance Agent`: service identity, tenant isolation, user consent, financial-output governance, trace redaction, and evaluation gates.
+- `Artifact Agent`: attachment storage, parsing / OCR, citations, and retention.
 
 The first implementation should use one orchestrator plus deterministic workers. Autonomous multi-agent behavior is deferred.
 
