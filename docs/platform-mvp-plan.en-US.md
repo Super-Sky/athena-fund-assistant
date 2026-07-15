@@ -156,7 +156,7 @@ This phase uses one acceptance scenario: a user asks whether their portfolio nee
 Deliverables:
 
 - Athena generic agent loop: success criteria, budget, deadline, tool retry, waiting / terminal stop reason, checkpoint / resume.
-- `OpenTelemetry Collector` export path and an optional self-hosted `Langfuse` Docker profile; by default export only allowlisted, redacted span attributes.
+- Deliver OpenTelemetry in two slices: first add a unified `trace_id`, seven runtime-trace categories, allowlisting / recursive redaction, and forced sampling; after execution states stabilize, add the `OpenTelemetry Collector` and optional self-hosted `Langfuse` Docker profile.
 - Unified trace and correlation IDs for run / step / model / tool / memory / governance / remote callbacks.
 - Actual Redis integration for cache, concurrency/rate limits, idempotency locks, and async jobs; start with a Go-native queue and evaluate Temporal separately for complex multi-day workflows.
 - A `pgvector` knowledge and memory retrieval slice using PostgreSQL first, without a separate vector database.
@@ -172,8 +172,8 @@ Acceptance:
 
 Deliverables:
 
-- In-repository `Promptfoo` evaluation configuration and CI commands covering missing or stale data, tool failure, single-path conclusions, guaranteed-return language, missing risk/invalidation, unsupported percentages, and unauthorized account reads.
 - User-account authentication, token/session, read-only data consent, tool scopes, consent revocation, and audit events. Brokerage sync remains read-only and requires separate consent.
+- In-repository `Promptfoo` evaluation configuration and CI commands: block releases with deterministic critical cases first, then add Athena-trace and optional model-assisted evaluations. Cover missing or stale data, tool failure, single-path conclusions, guaranteed-return language, missing risk/invalidation, unsupported percentages, and unauthorized account reads.
 - Restricted document parsing, OCR, and web search plugins with governed size, file type, outbound domains, timeout, source, and citations; untrusted execution goes through an isolated sandbox.
 - Keep the model gateway optional: retain the Athena provider abstraction first, then add a LiteLLM profile only when multi-provider routing, virtual keys, or central budgets are justified.
 
@@ -200,8 +200,11 @@ Acceptance:
 
 1. **Existing Athena integration chain**: `Athena#7` → `#8` → `#9` → `#14` → `#10` → `#11` → `#12`. First complete the generic run, tool, remote callback, built-in tools, memory, trace, and Docker merges plus the dual-service smoke.
 2. **Existing fund business chain**: progress `fund#15`, `#16`, `#17` alongside `fund#10` and `#11`; live providers still require user-owned key/token validation before becoming the default path.
-3. **New Athena evolution chain**: `Athena#21` observability projection → `Athena#22` execution-control/Redis job contract → `Athena#23` pgvector memory retrieval. These depend only on generic runtime contracts and cannot read fund tables.
-4. **New trusted-fund chain**: `fund#30` account consent → `fund#31` Promptfoo financial evaluation → restricted document/search plugins. These call Athena through remote tools and do not modify Athena core.
+3. **Parallel safety foundations**: complete identity, read-only consent, scopes, revocation, and remote-tool denial in `fund#30`; in parallel, limit `Athena#21A` to unified `trace_id`, trace taxonomy, allowlisting / recursive redaction, and sampling, without adding Langfuse product behavior.
+4. **Execution and evaluation slice**: build goal evaluation, budgets, stable stop reasons, PostgreSQL state truth, and Redis dispatch in `Athena#22`; add deterministic fixtures and a CI release block in `fund#31A` in parallel.
+5. **Observability and memory closure**: after the #22 state machine stabilizes, connect the OTLP Collector and optional Langfuse profile in `Athena#21B`; make `Athena#23` reuse the `fund#30` ownership / consent contract for pgvector retrieval; then add cross-service trace and optional model-assisted evaluations in `fund#31B`.
+
+These Athena capabilities depend only on generic runtime contracts and cannot read fund tables. Trusted-fund capabilities call Athena through remote tools and do not modify Athena core.
 
 Before implementation, each task must create or update its canonical GitHub Issue in the owning repository. Cross-repository dependencies use `Refs`; unfinished work must not use `Closes`.
 

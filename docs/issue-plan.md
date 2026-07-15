@@ -214,6 +214,7 @@ The fund assistant depends on these Athena runtime foundation tasks:
 ## Follow-Up Sequencing
 
 1. Finish and merge the existing Agent Run / tool / remote-tool stack, then run the dual-service smoke.
-2. Make real provider validation pass using user-owned credentials; wire Redis cache and freshness status around the approved providers.
-3. Add Athena `#21`–`#23` while the fund app exercises them through read-only analysis tools.
-4. Add fund `#30` consent before any account synchronization, then enforce fund `#31` before a release demo.
+2. In parallel, complete fund `#30` consent / scopes / revocation and Athena `#21A` trace ID, taxonomy, allowlisting, recursive redaction, and sampling.
+3. Implement Athena `#22` goal evaluation, budgets, stop reasons, PostgreSQL state truth, and Redis dispatch while fund `#31A` adds deterministic fixtures and a CI release block.
+4. After the #22 state machine stabilizes, finish Athena `#21B` OTLP / optional Langfuse, then Athena `#23` consent-aware pgvector retrieval and fund `#31B` cross-service trace evaluations.
+5. Continue real-provider admission with user-owned credentials in parallel; wire Redis cache and freshness status only around approved providers.

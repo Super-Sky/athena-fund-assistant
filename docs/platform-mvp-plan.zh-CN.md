@@ -156,7 +156,7 @@
 交付：
 
 - Athena 通用 agent loop：success criteria、budget、deadline、tool retry、waiting / terminal stop reason、checkpoint / resume。
-- `OpenTelemetry Collector` 导出链路，以及可选 `Langfuse` 自托管 Docker profile；默认只导出 allowlisted、脱敏的 span 属性。
+- OpenTelemetry 分两段交付：先完成统一 `trace_id`、七类 runtime trace、allowlist / 递归脱敏与强制采样，再在执行状态稳定后接入 `OpenTelemetry Collector` 和可选 `Langfuse` 自托管 Docker profile。
 - run / step / model / tool / memory / governance / remote callback 的统一 trace ID 与 correlation IDs。
 - Redis 实际接入缓存、并发/速率限制、幂等锁和异步 job；长任务先使用 Go-native queue，复杂跨天工作流另行评估 Temporal。
 - `pgvector` 知识与记忆检索切片，先复用 PostgreSQL，不新增独立向量数据库。
@@ -172,8 +172,8 @@
 
 交付：
 
-- `Promptfoo` 评测仓内配置与 CI 命令：覆盖真实数据缺失、数据陈旧、工具失败、单一路径结论、保证收益措辞、缺风险/失效条件、百分比无依据、越权账户读取等案例。
 - 用户账户认证、token/session、read-only 数据授权、工具 scope、授权撤销和审计事件；券商同步只读且在单独授权后启用。
+- `Promptfoo` 评测仓内配置与 CI 命令：先以确定性关键用例阻断发布，再接入 Athena trace 与可选模型评测；覆盖真实数据缺失、数据陈旧、工具失败、单一路径结论、保证收益措辞、缺风险/失效条件、百分比无依据、越权账户读取等案例。
 - 文件解析、OCR 和网页搜索作为受限插件：大小、类型、外连域名、超时、来源和引用全受治理；不可信执行进入隔离 sandbox。
 - 模型网关保持可选：先维持 Athena provider abstraction；多提供商路由、统一预算和虚拟 key 有明确需求后再接 LiteLLM profile。
 
@@ -200,8 +200,11 @@
 
 1. **现有 Athena 接入链**：`Athena#7` → `#8` → `#9` → `#14` → `#10` → `#11` → `#12`。先完成通用 run、tool、remote callback、built-in tools、memory、trace、Docker 的合并与双服务 smoke。
 2. **现有基金业务链**：`fund#15`、`#16`、`#17` 与 `fund#10`、`#11` 并行推进，但真实 provider 仍需用户自有 key/token 的 live validation 才能进入默认路径。
-3. **新增 Athena 演进链**：`Athena#21` 观测投影 → `Athena#22` 执行控制/Redis job contract → `Athena#23` pgvector memory retrieval。它们只能依赖通用 runtime 契约，不可读取基金表。
-4. **新增基金可信链**：`fund#30` 账户授权 → `fund#31` Promptfoo 金融评测 → 受限文件/搜索插件。它们通过 remote tools 调用 Athena，不改写 Athena core。
+3. **安全基础并行切片**：`fund#30` 先完成身份、read-only consent、scope、撤销和 remote tool 拒绝；同时 `Athena#21A` 只完成统一 `trace_id`、trace taxonomy、allowlist / 递归脱敏和采样，不接 Langfuse 业务能力。
+4. **执行与评测切片**：`Athena#22` 在安全 trace 基础上完成目标评估、预算、稳定 stop reason、PostgreSQL 状态真相和 Redis dispatch；`fund#31A` 并行增加确定性 fixture 与 CI 阻断。
+5. **观测与记忆收口**：`Athena#21B` 在 #22 状态机稳定后接 OTLP Collector 与可选 Langfuse profile；`Athena#23` 复用 `fund#30` 的 ownership / consent 契约实现 pgvector retrieval；`fund#31B` 再加入跨服务 trace 与可选模型评测。
+
+上述 Athena 能力只能依赖通用 runtime 契约，不可读取基金表；基金可信能力通过 remote tools 调用 Athena，不改写 Athena core。
 
 每项任务在开始实现前都要在对应仓创建或更新 canonical GitHub Issue；跨仓依赖在 Issue 中使用 `Refs`，不在未完成时使用 `Closes`。
 

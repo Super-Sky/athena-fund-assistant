@@ -15,8 +15,9 @@
 
 1. Complete the existing Athena integration chain: `Athena#7`, `#8`, `#9`, `#14`, `#10`, `#11`, and `#12`, then pass the dual-service smoke.
 2. Prepare fund accounts, conversation, knowledge, and real-data work in parallel: `fund#15`, `#16`, `#17`, `#10`, and `#11`. A real provider becomes the default only after live validation with a user-owned key or token.
-3. Drive new generic capabilities through fund analysis: `Athena#21` observability projection, `Athena#22` goal-driven execution control and Redis jobs, and `Athena#23` governed pgvector memory retrieval.
-4. Complete `fund#30` read-only consent before exposing real account data, then enable the `fund#31` Promptfoo financial evaluation gate before a release demo.
+3. Complete two safety foundations in parallel: `fund#30` read-only consent / scopes / revocation, and `Athena#21A` unified `trace_id`, trace taxonomy, allowlisting / recursive redaction, and sampling.
+4. Then use `Athena#22` for goal-driven execution controls, stable stop reasons, and Redis jobs while `fund#31A` adds deterministic financial fixtures and a CI release block.
+5. After the state machine stabilizes, use `Athena#21B` for the OTLP Collector and optional Langfuse profile, make `Athena#23` reuse the consent contract for pgvector memory retrieval, and finish cross-service trace plus optional model-assisted evaluations in `fund#31B`.
 
 The full deliverables, acceptance criteria, and component-admission matrix live in `docs/platform-mvp-plan.en-US.md` and its Chinese counterpart. The delivery queue lives in `docs/issue-plan.md`.
 

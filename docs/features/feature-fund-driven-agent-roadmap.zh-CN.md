@@ -15,8 +15,9 @@
 
 1. 完成既有 Athena 接入链：`Athena#7`、`#8`、`#9`、`#14`、`#10`、`#11`、`#12`，并通过双服务 smoke。
 2. 并行推进基金账户、对话、知识与真实数据准备：`fund#15`、`#16`、`#17`、`#10`、`#11`。真实数据必须使用用户自有 key/token 完成 live validation 后才可成为默认路径。
-3. 以基金分析驱动新增通用能力：`Athena#21` 观测投影、`Athena#22` 目标驱动执行控制与 Redis job、`Athena#23` 受治理的 pgvector memory retrieval。
-4. 在可读取真实账户数据前先完成 `fund#30` read-only consent；在发布演示前启用 `fund#31` Promptfoo 金融评测门禁。
+3. 并行完成两项安全基础：`fund#30` read-only consent / scope / 撤销，以及 `Athena#21A` 的统一 `trace_id`、trace taxonomy、allowlist / 递归脱敏和采样。
+4. 再由 `Athena#22` 完成目标驱动执行控制、稳定 stop reason 与 Redis job；`fund#31A` 并行增加确定性金融 fixture 和 CI 阻断。
+5. 状态机稳定后由 `Athena#21B` 接入 OTLP Collector 与可选 Langfuse profile；`Athena#23` 复用授权契约完成 pgvector memory retrieval；`fund#31B` 补跨服务 trace 与可选模型评测。
 
 完整交付项、验收和组件准入矩阵维护在 `docs/platform-mvp-plan.zh-CN.md` 与对应英文版本；开发队列维护在 `docs/issue-plan.md`。
 
