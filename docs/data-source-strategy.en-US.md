@@ -265,6 +265,8 @@ References:
 - `alpha_vantage_provider`
 - `tushare_provider`
 
+Implementation status: `alpha_vantage_provider` and `tushare_provider` now exist behind explicit user-key / user-token startup modes. Neither is the default. Each startup re-runs structural and metadata validation before serving requests. Alpha Vantage benchmark values are ETF proxies and are labeled as such; its exchange-calendar capability is intentionally unavailable. Tushare currently supplies China fund NAV, CSI 300, and SSE calendar coverage only. A future cross-market composite must preserve the underlying provider metadata instead of hiding it.
+
 ### Second Batch
 
 - `fmp_provider`
@@ -281,15 +283,13 @@ References:
 
 Providers must implement:
 
-- `ListInstruments`
 - `GetFundSnapshot`
-- `GetMarketSnapshot`
-- `GetHistoricalPrices`
 - `GetEquitySnapshot`
 - `GetIndexSnapshot`
-- `GetFxRate`
+- `GetFXRate`
 - `GetMarketCalendar`
-- `GetProviderStatus`
+
+Credential-backed adapters additionally implement `ProviderName` and `ValidateCredentials`. Unsupported capability must return an explicit error; it must not fabricate a calendar, price, or FX observation.
 
 Provider responses must include:
 

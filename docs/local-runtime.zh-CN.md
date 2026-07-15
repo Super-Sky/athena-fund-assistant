@@ -66,6 +66,26 @@ go run ./cmd/api
 
 CSV provider 是本地 MVP / 演示兜底，不是授权实时行情源。CSV 每行必须保留 `source`、`provider`、`fetched_at`、`market_time`、`timezone`、`delay`、`license_terms`、`confidence`、`schema_version`，样例文件使用 `user_supplied_csv_for_local_mvp_not_licensed_live_feed` 明确标记授权边界。
 
+只有在 Alpha Vantage provider probe 通过后，才可使用用户自有 Key 启动实时 provider：
+
+```bash
+ALPHA_VANTAGE_API_KEY=... \
+ATHENA_FUND_PROVIDER=alpha_vantage \
+go run ./cmd/api
+```
+
+该模式启动前会验证 QQQ ETF、AAPL 个股、带明确标记的标普 500 ETF 代理和 USD/CNY。当前实现不把 Alpha Vantage 当作交易所日历权威源，日历能力会明确不可用，而不会猜测交易日。`SPX`、`NDX`、`DJI` 仅作为 `SPY`、`QQQ`、`DIA` 的 ETF 代理展示，不冒充直接指数行情。
+
+只有在 Tushare provider probe 通过后，才可使用用户自有 Token 启动实时 provider：
+
+```bash
+TUSHARE_TOKEN=... \
+ATHENA_FUND_PROVIDER=tushare \
+go run ./cmd/api
+```
+
+该模式启动前会验证中国公募基金净值、沪深 300 指数和上交所交易日历。它不提供美股、汇率和美股日历；后续组合 provider 必须只拼接已独立准入的数据源。
+
 ## 双服务 smoke
 
 使用本仓脚本可以在本机启动 Athena、fund assistant 和一个 fake OpenAI-compatible 模型，验证完整本地链路：
@@ -146,7 +166,7 @@ ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh
 
 - API 容器会读取 `DATABASE_URL` 并用于账户看板、journal/review 持久化；`REDIS_URL` 当前仍预留给后续缓存和异步任务。
 - API 会读取 `ATHENA_FUND_UPLOAD_DIR` 作为附件上传目录；未设置时使用系统临时目录。
-- API 会读取 `ATHENA_FUND_PROVIDER`；未设置或为 `mock` 时使用 `mock_provider`，为 `csv` 时读取 `ATHENA_FUND_CSV_PATH`。
+- API 会读取 `ATHENA_FUND_PROVIDER`；未设置或为 `mock` 时使用 `mock_provider`，为 `csv` 时读取 `ATHENA_FUND_CSV_PATH`，为 `alpha_vantage` 时要求 `ALPHA_VANTAGE_API_KEY`，为 `tushare` 时要求 `TUSHARE_TOKEN`。
 - API 会读取 `ATHENA_BASE_URL` 和可选 `ATHENA_AUTH_TOKEN`；未设置时使用 mock Athena client，便于单服务演示。
 - 双服务 Docker overlay 会额外读取 `ATHENA_REPO`、`ATHENA_DUAL_API_PORT`、`ATHENA_FAKE_MODEL_PORT`、`ATHENA_FUND_PROVIDER` 和 `ATHENA_FUND_CSV_PATH`。
 - 当前 mock / CSV 数据必须在 UI / trace 中继续标记为临时或用户提供数据。

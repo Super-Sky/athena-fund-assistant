@@ -122,6 +122,35 @@ func loadProvider() (data.Provider, data.ValidationOptions) {
 				{Market: "US", Date: probeDate},
 			},
 		}
+	case "alpha_vantage":
+		provider, err := data.NewAlphaVantageProvider(data.AlphaVantageConfig{
+			BaseURL: os.Getenv("ALPHA_VANTAGE_BASE_URL"),
+			APIKey:  os.Getenv("ALPHA_VANTAGE_API_KEY"),
+		})
+		if err != nil {
+			log.Fatalf("alpha vantage data provider initialization failed: %v", err)
+		}
+		log.Printf("data provider using Alpha Vantage user-key workflow; live data is admitted only after startup validation")
+		return provider, data.ValidationOptions{
+			FundCodes:     []string{"QQQ"},
+			EquitySymbols: []string{"AAPL"},
+			IndexCodes:    []string{"SPX"},
+			FXPairs:       []data.FXPair{{BaseCurrency: "USD", QuoteCurrency: "CNY"}},
+		}
+	case "tushare":
+		provider, err := data.NewTushareProvider(data.TushareConfig{
+			BaseURL: os.Getenv("TUSHARE_BASE_URL"),
+			Token:   os.Getenv("TUSHARE_TOKEN"),
+		})
+		if err != nil {
+			log.Fatalf("tushare data provider initialization failed: %v", err)
+		}
+		log.Printf("data provider using Tushare user-token workflow; live data is admitted only after startup validation")
+		return provider, data.ValidationOptions{
+			FundCodes:  []string{"000001"},
+			IndexCodes: []string{"000300"},
+			Calendars:  []data.CalendarProbe{{Market: "CN", Date: time.Now().UTC()}},
+		}
 	default:
 		log.Fatalf("unsupported ATHENA_FUND_PROVIDER %q", os.Getenv("ATHENA_FUND_PROVIDER"))
 		return nil, data.ValidationOptions{}
