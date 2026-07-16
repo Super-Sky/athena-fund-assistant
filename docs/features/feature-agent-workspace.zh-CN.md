@@ -25,7 +25,8 @@
 - `POST /internal/tools/execute`
   - 执行 `remote_tool_execution.v1` callback。目前支持两个只读工具；`account_overview` 额外校验 Athena 服务身份和用户 consent scopes。
 - `apps/web`
-  - 展示本地用户会话、只读授权、Agent 对话、skill selector、文件上传、消息列表、附件状态和 trace timeline。
+  - 以 Agent 对话作为默认首页，展示账户核心上下文、skill selector、文件上传、消息列表、附件状态和 trace timeline。
+  - 账户、持仓、收益、策略分析、偏好、知识库和数据授权拆分为独立导航页面，仅保留核心数据与核心配置。
 
 ## 上传边界
 
@@ -48,7 +49,7 @@
 
 - `go test ./...`
 - `yarn build` in `apps/web`
-- Browser smoke: 工作台、skill selector、上传入口和 trace timeline 可见。
+- Browser smoke: 对话默认打开，skill selector、上传入口和 trace timeline 可见；桌面与移动导航无横向页面溢出。
 - Server test: remote tool catalog、服务身份、授权成功、缺 scope、撤销后拒绝、`fund_market_snapshot` 和 unknown-tool error envelope。
 - Server test: conversation message starts Athena mock run and writes `athena_agent_run=ok` trace。
 - Dual-service smoke: 等待 `Super-Sky/Athena#24` 合入后更新并重跑，以验证带服务身份的 `account_overview` callback。

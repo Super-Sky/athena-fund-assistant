@@ -25,7 +25,8 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - `POST /internal/tools/execute`
   - Executes `remote_tool_execution.v1` callbacks. Both current tools are read-only; `account_overview` also validates Athena service identity and user consent scopes.
 - `apps/web`
-  - Shows local user session, read-only consent, Agent chat, skill selector, file upload, message list, attachment status, and trace timeline.
+  - Uses Agent conversation as the default home and shows core account context, skill selection, file upload, messages, attachment status, and trace timeline.
+  - Separates account, holdings, performance, strategy analysis, preferences, knowledge, and data access into focused navigation views that retain only core data and configuration.
 
 ## Upload Boundaries
 
@@ -48,7 +49,7 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 
 - `go test ./...`
 - `yarn build` in `apps/web`
-- Browser smoke: workspace, skill selector, upload entry, and trace timeline are visible.
+- Browser smoke: conversation opens by default; skill selection, upload, and trace are visible; desktop and mobile navigation do not create horizontal page overflow.
 - Server test: remote tool catalog, service identity, allowed consent, missing scope, post-revocation denial, `fund_market_snapshot`, and the unknown-tool error envelope.
 - Server test: conversation message starts an Athena mock run and writes an `athena_agent_run=ok` trace.
 - Dual-service smoke: update and rerun after `Super-Sky/Athena#24` lands so the `account_overview` callback includes service authentication.
