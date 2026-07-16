@@ -24,17 +24,18 @@
 - 本地无 `DATABASE_URL` 时使用内存 demo store；Docker / DATABASE_URL 环境使用 PostgreSQL store。
 - 当前账户行情仍为 mock/demo 数据，`trace.mock_data_temporary=true`。
 - 当前不保存券商账号、券商凭证或下单能力。
-- 账号授权同步只作为后续只读方向，当前 `read_only_sync_available=false`。
+- 用户 session 与可撤销账户读取 consent 已实现；真实券商/账户同步仍是后续只读方向，因此 `read_only_sync_available=false`。
 - CNY / USD 持仓通过 `fx_to_base` 转换到账户本位币，避免把美股和 A 股未标注地混在一条时间线。
 
 ## 后续
 
 - 将 journal/review 从内存 store 迁移到持久化 store，并关联账户/持仓。
 - 将账户持仓与真实数据 provider 连接，替换 mock/demo 价格和汇率。
-- 与 Athena remote tools 对接，让 Agent 可读取账户概览和写入决策日志。
+- 继续把已通过联调的服务身份 + consent 账户读取接入真实账户数据 provider；当前账户价格与汇率仍是 mock/demo。
 
 ## 验证
 
 - `go test ./...`
 - `ATHENA_FUND_PG_TEST_DSN=... go test ./internal/account -run TestPostgresStoreOverviewAndReplaceHoldings -count=1`
 - `yarn build` in `apps/web`
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh`

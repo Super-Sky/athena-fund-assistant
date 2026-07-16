@@ -9,6 +9,7 @@ import (
 
 	"github.com/Super-Sky/athena-fund-assistant/internal/account"
 	"github.com/Super-Sky/athena-fund-assistant/internal/athena"
+	"github.com/Super-Sky/athena-fund-assistant/internal/authorization"
 	"github.com/Super-Sky/athena-fund-assistant/internal/conversation"
 	"github.com/Super-Sky/athena-fund-assistant/internal/data"
 	"github.com/Super-Sky/athena-fund-assistant/internal/decision"
@@ -27,6 +28,7 @@ func main() {
 	log.Printf("data provider validation passed with %d checks", len(report.Checks))
 	var accountStore account.Store = account.NewMemoryStore()
 	var journalStore journal.Store = journal.NewMemoryStore()
+	var authorizationStore authorization.Store = authorization.NewMemoryStore()
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		postgresStore, err := account.NewPostgresStore(context.Background(), databaseURL)
 		if err != nil {
@@ -50,9 +52,21 @@ func main() {
 		}()
 		journalStore = postgresJournalStore
 		log.Printf("journal store using PostgreSQL")
+		postgresAuthorizationStore, err := authorization.NewPostgresStore(context.Background(), databaseURL)
+		if err != nil {
+			log.Fatalf("postgres authorization store initialization failed: %v", err)
+		}
+		defer func() {
+			if err := postgresAuthorizationStore.Close(context.Background()); err != nil {
+				log.Printf("postgres authorization store close failed: %v", err)
+			}
+		}()
+		authorizationStore = postgresAuthorizationStore
+		log.Printf("authorization store using PostgreSQL")
 	} else {
 		log.Printf("account store using in-memory demo data")
 		log.Printf("journal store using non-durable in-memory demo data")
+		log.Printf("authorization store using non-durable in-memory data")
 	}
 	conversationStore, err := conversation.NewMemoryStore(getenv("ATHENA_FUND_UPLOAD_DIR", ""))
 	if err != nil {
@@ -71,13 +85,16 @@ func main() {
 	}
 
 	svc := server.New(server.Dependencies{
-		Provider:      provider,
-		DecisionMaker: decision.NewEngine(),
-		Journals:      journalStore,
-		Accounts:      accountStore,
-		Conversations: conversationStore,
-		Preferences:   preference.NewMemoryStore(),
-		Athena:        athenaClient,
+		Provider:         provider,
+		DecisionMaker:    decision.NewEngine(),
+		Journals:         journalStore,
+		Accounts:         accountStore,
+		Conversations:    conversationStore,
+		Preferences:      preference.NewMemoryStore(),
+		Athena:           athenaClient,
+		Authorization:    authorization.NewService(authorizationStore),
+		LocalAuthSubject: getenv("ATHENA_FUND_LOCAL_AUTH_SUBJECT", "demo-user"),
+		RemoteToolToken:  os.Getenv("ATHENA_FUND_REMOTE_TOOL_TOKEN"),
 	})
 
 	log.Printf("athena fund assistant api listening on %s", addr)

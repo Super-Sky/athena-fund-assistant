@@ -23,9 +23,9 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - `GET /internal/tools/catalog`
   - Emits fund-assistant tool registrations that can be registered in Athena's remote tool registry.
 - `POST /internal/tools/execute`
-  - Executes `remote_tool_execution.v1` callbacks. The current slice supports the read-only `account_overview` and `fund_market_snapshot` tools.
+  - Executes `remote_tool_execution.v1` callbacks. Both current tools are read-only; `account_overview` also validates Athena service identity and user consent scopes.
 - `apps/web`
-  - Shows Agent chat, skill selector, file upload, message list, attachment status, and trace timeline.
+  - Shows local user session, read-only consent, Agent chat, skill selector, file upload, message list, attachment status, and trace timeline.
 
 ## Upload Boundaries
 
@@ -38,16 +38,17 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 ## Athena Boundary
 
 - The UI and API now expose the contract shape for starting an Agent run, and the app-side Athena client writes run trace back to the conversation.
-- The fund assistant now exposes Athena remote tool callbacks; Athena can register the read-only business tools in its remote registry and call back into this app.
+- The fund assistant exposes Athena remote tool callbacks. Athena injects a separate service identity for account callbacks and carries the safe `consent_grant_ref` from model context.
 - Without `ATHENA_BASE_URL`, trace shows a mock run; with external Athena configured, trace records the real Athena run_id, status, and trace_available.
 - Fund business objects, uploaded files, and business tool implementations stay in the fund assistant and are not written into Athena core.
 - Current remote tools are read-only, use `side_effect_level=none`, and do not perform automatic trading or money movement.
+- `Super-Sky/Athena#24` owns remote-tool secret references and outbound header injection. Local and Docker dual-service smoke now verify wrong-token denial, correct-token success, and token no-leak.
 
 ## Verification
 
 - `go test ./...`
 - `yarn build` in `apps/web`
 - Browser smoke: workspace, skill selector, upload entry, and trace timeline are visible.
-- Server test: remote tool catalog, `account_overview`, `fund_market_snapshot`, and the unknown-tool error envelope.
+- Server test: remote tool catalog, service identity, allowed consent, missing scope, post-revocation denial, `fund_market_snapshot`, and the unknown-tool error envelope.
 - Server test: conversation message starts an Athena mock run and writes an `athena_agent_run=ok` trace.
-- Dual-service smoke: `./scripts/smoke_dual_service.sh` starts Athena, the fund assistant, and a fake OpenAI-compatible model, then verifies Athena remote registry, the `account_overview` callback, and fund conversation trace writeback.
+- Dual-service smoke: both `ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh` and `./scripts/smoke_dual_docker.sh` passed.

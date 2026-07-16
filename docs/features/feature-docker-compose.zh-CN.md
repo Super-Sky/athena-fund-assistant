@@ -23,7 +23,7 @@
 - `scripts/smoke_dual_docker.sh`
   - 构建并启动双服务 Docker 拓扑。
   - 注册 fake 模型和 fund remote tools。
-  - 验证 Athena Agent Run、remote tool callback、fund conversation trace 回写和 CSV 决策 trace。
+  - 验证错误服务 token 拒绝、正确 token + consent 通过、撤销后拒绝、fund conversation trace 回写、artifacts no-leak 和 CSV 决策 trace。
 
 ## 边界
 
@@ -31,15 +31,18 @@
 - fake 模型只用于 smoke，不代表真实模型质量。
 - CSV provider 只用于本地兜底，不冒充授权实时行情。
 - 不包含支付、订阅、券商账号集成或自动交易能力。
+- `ATHENA_FUND_REMOTE_TOOL_TOKEN` 必须通过本地 `.env` / production secret 注入，不能提交真实值；catalog 和 Athena registration 只保存 `env://ATHENA_FUND_REMOTE_TOOL_TOKEN` 引用。
+- 双服务 overlay 在 token 为空时让 Athena / fund API healthcheck fail closed，但不阻断 `docker compose config/down/ps/logs` 等生命周期命令。
+- Athena 在双服务 smoke 中启用 debug observability；脚本导出容器日志和 control-plane JSON，与主机 artifacts 一起执行 credential no-leak 扫描。
 
 ## 验证
 
 - `docker compose -f docker-compose.yml -f docker-compose.dual.yml config`
 - `bash -n scripts/smoke_dual_docker.sh`
 - `git diff --check`
-- 尝试运行 `ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh`：
-  - 已完成基础镜像拉取、Athena Dockerfile 解析、依赖下载和进入 Athena `go build` 阶段。
-  - 本机 Docker 首次构建在 Athena `go build` 阶段长时间无输出，已人工中断并清理 `athena-fund-dual-smoke` compose 资源。
-  - 后续复查发现新建 `docker run --rm alpine:3.20 sh -lc 'echo ok'` 和 `docker run --rm golang:1.23-alpine ...` 都停留在 `Created`，未进入 `Running`；这说明当前 Docker Desktop 新容器启动路径不健康，不是 fund assistant 业务代码的确定性失败证据。
-  - 已移除停留在 `Created` 的测试容器，并终止挂住的 Docker CLI 进程。
-  - 后续需要在 Docker Desktop 恢复、Docker cache 就绪或 CI 资源更稳定时重新运行完整 smoke，取得最终 pass 证据。
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh` 通过：
+  - Compose 启动 Athena、fund API/Web、PostgreSQL、Redis 和 fake model。
+  - 错误 token 返回 `service_auth_denied`，正确 token + 有效 grant 完成 `account_overview`。
+  - fund conversation 写回完成态 Athena trace；grant 撤销后返回 `authorization_denied`。
+  - smoke artifacts、容器日志、Athena remote trace 和 control-plane JSON 未出现服务 token 或用户 session token value。
+  - CSV provider 继续返回 `temporary_data=true` 和 conservative/balanced/aggressive 三档策略。

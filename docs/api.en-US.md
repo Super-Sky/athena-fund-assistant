@@ -17,6 +17,9 @@ This API belongs to the fund assistant business application layer, not Athena co
 - Mock data must surface `mock_data_temporary=true` in trace output. Mock / CSV fallback data must surface `temporary_data=true` and an explicit `data_boundary` in decision traces.
 - Financial output must include multiple options, evidence, risks, invalidation conditions, and review timing.
 - Fund analysis returns a deterministic `governance` result. `blocked` output is rejected; `flagged` output remains visible with its source/freshness disclosure.
+- User business APIs require `Authorization: Bearer <session_token>` except for health checks, local session issuance, the skill list, and the remote-tool catalog.
+- The current local session issuer accepts only the subject configured by `ATHENA_FUND_LOCAL_AUTH_SUBJECT`, which defaults to `demo-user`. A production identity provider is outside this slice.
+- A raw session token is returned only at issuance; the server stores only its SHA-256 hash.
 
 ## `GET /healthz`
 
@@ -34,6 +37,51 @@ Response example:
 
 Checks that the journal persistence boundary can accept work. It returns `503` when the configured store is unavailable; Docker Compose uses it for API readiness.
 
+## `POST /api/auth/sessions`
+
+Issues a bearer session for the configured local demo subject.
+
+Request fields:
+
+- `user_id`: must equal `ATHENA_FUND_LOCAL_AUTH_SUBJECT`.
+- `ttl_seconds`: optional; defaults to 24 hours and is capped at 7 days.
+
+The response contains the one-time `token` and token-free `session` metadata. This endpoint is a local MVP bootstrap, not a production login interface.
+
+## `GET /api/auth/session`
+
+Validates the bearer token and returns current session metadata. The raw token is never returned.
+
+## `DELETE /api/auth/sessions/current`
+
+Immediately revokes the current session. Success returns `204`.
+
+## `GET /api/consents`
+
+Returns the current user's consent grants in stable newest-first order. Grants contain only safe references, scopes, revision, expiry, and revocation state.
+
+## `POST /api/consents`
+
+Creates a read-only consent grant for the `athena-runtime` audience.
+
+Example request:
+
+```json
+{
+  "audience": "athena-runtime",
+  "scopes": [
+    "fund.account.summary.read",
+    "fund.holding.snapshot.read"
+  ]
+}
+```
+
+`ttl_seconds` is optional, defaults to 30 days, and is capped at 90 days. Every scope must end in `.read`.
+
+## `POST /api/consents/{grant_ref}/revoke`
+
+Revokes a consent grant owned by the current user. The first revocation increments the grant revision; subsequent remote-tool calls return `grant_revoked`.
+
 ## `GET /api/accounts/{user_id}/overview`
 
 Reads the user's account performance dashboard.
@@ -41,6 +89,8 @@ Reads the user's account performance dashboard.
 Current local demo user:
 
 - `demo-user`
+
+The bearer-session subject must match the path `user_id`; otherwise the API returns `subject_mismatch`.
 
 Response fields:
 
@@ -154,13 +204,14 @@ Request fields:
 - `content`
 - `skill_id`
 - `attachment_ids`
+- `consent_grant_ref`: optional non-secret read-only grant reference supplied by the web workspace when account tools are needed.
 
 The response returns the updated `ConversationDetail`. The service saves the message, starts one generic Agent Run through the Athena client, and writes run status, run_id, trace_available, and stop_reason back to the conversation trace. When `ATHENA_BASE_URL` is unset, this call is handled by the mock client for local demos.
 
 The Agent Run request maps business semantics into generic Athena input:
 
 - `goal`: the user message.
-- `context_assets`: conversation ID, skill ID, and attachment IDs; attachments remain metadata-only.
+- `context_assets`: conversation ID, skill ID, attachment IDs, `user_id`, and the safe `consent_grant_ref`; attachments remain metadata-only.
 - `tools` / `enabled_tools`: OpenAI-compatible function tools, currently `account_overview` and `fund_market_snapshot`.
 - `governance_refs`: no automatic trading, no guaranteed-return claims, and data-source metadata required.
 - `constraints`: no automatic trading, no brokerage order placement, risk and invalidation required, and no single absolute path conclusion.
@@ -173,6 +224,9 @@ The current `athena_agent_run` trace metadata includes:
 - `stop_reason`
 - `tool_call_count`
 - `output_present`
+- `consent_contract`
+- `consent_grant_ref`
+- `authorization_subject`
 
 ## `GET /internal/tools/catalog`
 
@@ -188,16 +242,25 @@ Response fields:
 - `app_id`: currently `athena-fund-assistant`.
 - `items`: remote tools that can be registered in Athena.
 
+Each `items[]` contains `auth.type=bearer` and `auth.secret_ref=env://ATHENA_FUND_REMOTE_TOOL_TOKEN`. The catalog publishes only the secret reference; Athena and the fund assistant receive the real token independently from their runtime environments, and the value never enters registration JSON.
+
 Current read-only tools:
 
 - `account_overview`: reads the user's account overview, holdings, recent operations, and performance trend.
 - `fund_market_snapshot`: reads a fund / ETF snapshot while preserving source, provider, fetched_at, market_time, timezone, delay, license, confidence, and schema_version.
+
+`account_overview` requires `user_id` plus `consent_grant_ref` and declares these scopes:
+
+- `fund.account.summary.read`
+- `fund.holding.snapshot.read`
 
 All current tools use `side_effect_level=none`. They do not trade, connect to brokerage order placement, or move money.
 
 ## `POST /internal/tools/execute`
 
 Executes Athena `remote_tool_execution.v1` callbacks. This endpoint is for the Athena remote adapter, not for direct frontend user calls.
+
+When authorization is enabled, requests must include `Authorization: Bearer <service_token>` matching `ATHENA_FUND_REMOTE_TOOL_TOKEN`. The service token must never enter tool arguments, model context, or trace data.
 
 Request fields:
 
@@ -225,12 +288,14 @@ Error responses use the same envelope and include:
 
 Supported arguments:
 
-- `account_overview`: `{"user_id":"demo-user"}`; `user_id` defaults to `demo-user` when omitted.
+- `account_overview`: `{"user_id":"demo-user","consent_grant_ref":"grant_..."}`; both fields are required.
 - `fund_market_snapshot`: `{"instrument_code":"QQQ"}`; `instrument_code` is required.
 
 Boundaries:
 
 - This endpoint exposes fund-assistant business tool implementations only and does not import Athena internal Go packages.
+- `account_overview` validates service identity, subject, audience, grant expiry/revocation, account-summary scope, and holding-snapshot scope.
+- Authorization refusals use `error.code=authorization_denied`; metadata contains only the safe `authorization_code`, `consent_grant_ref`, revision, and required scope.
 - Returned content still must be interpreted through its metadata to distinguish real and mock data.
 - Unknown tools such as order-placement `place_order` return `unknown_tool` and never execute a money-moving action.
 
@@ -378,6 +443,7 @@ Returns the generated review task by ID, or `404` when it does not exist.
 
 - The preference / knowledge store is in-memory and returns to the demo seed on service restart. PostgreSQL persistence and permissioned approval are follow-up work.
 - The account overview uses PostgreSQL persistence when `DATABASE_URL` exists; otherwise it uses the in-memory demo store.
+- Sessions, consent grants, and authorization audits use PostgreSQL when `DATABASE_URL` exists and a non-durable memory store otherwise.
 - The current data provider is a mock provider and must not be treated as production market data.
-- The current API does not implement user authentication, custody, automatic trading, or brokerage order placement.
+- The current API provides bearer-session bootstrap only for a configured local demo subject; it does not include production OAuth/OIDC, custody, automatic trading, or brokerage order placement.
 - Redis, attachment parsers/OCR/PDF/CSV parsing, persistent journal/review account links, and real providers are later implementation items.

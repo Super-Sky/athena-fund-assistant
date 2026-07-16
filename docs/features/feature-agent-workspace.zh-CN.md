@@ -23,9 +23,9 @@
 - `GET /internal/tools/catalog`
   - 输出可注册到 Athena remote tool registry 的 fund assistant 工具清单。
 - `POST /internal/tools/execute`
-  - 执行 `remote_tool_execution.v1` callback，目前支持 `account_overview` 和 `fund_market_snapshot` 两个只读工具。
+  - 执行 `remote_tool_execution.v1` callback。目前支持两个只读工具；`account_overview` 额外校验 Athena 服务身份和用户 consent scopes。
 - `apps/web`
-  - 展示 Agent 对话、skill selector、文件上传、消息列表、附件状态和 trace timeline。
+  - 展示本地用户会话、只读授权、Agent 对话、skill selector、文件上传、消息列表、附件状态和 trace timeline。
 
 ## 上传边界
 
@@ -38,16 +38,17 @@
 ## Athena 边界
 
 - 当前 UI 和 API 已具备发起 Agent run 的 contract 形态，并通过 app-side Athena client 写回 run trace。
-- fund assistant 已暴露 Athena remote tools callback；Athena 可以把只读业务工具注册到 remote registry 后回调本应用。
+- fund assistant 已暴露 Athena remote tools callback；账户回调由 Athena 注入独立服务身份，并携带模型上下文中的安全 `consent_grant_ref`。
 - 未配置 `ATHENA_BASE_URL` 时 trace 会显示 mock run；配置后 trace 会记录真实 Athena run_id、status 和 trace_available。
 - 基金业务对象、附件文件和业务 tool 实现仍保留在 fund assistant，不写入 Athena core。
 - 当前 remote tools 均为只读，`side_effect_level=none`，不执行自动交易或资金动作。
+- Athena 的 remote-tool secret reference / header 注入由 `Super-Sky/Athena#24` 承接；本机与 Docker 双服务 smoke 均已验证错误 token 拒绝、正确 token 通过和 token no-leak。
 
 ## 验证
 
 - `go test ./...`
 - `yarn build` in `apps/web`
 - Browser smoke: 工作台、skill selector、上传入口和 trace timeline 可见。
-- Server test: remote tool catalog、`account_overview`、`fund_market_snapshot` 和 unknown-tool error envelope。
+- Server test: remote tool catalog、服务身份、授权成功、缺 scope、撤销后拒绝、`fund_market_snapshot` 和 unknown-tool error envelope。
 - Server test: conversation message starts Athena mock run and writes `athena_agent_run=ok` trace。
-- Dual-service smoke: `./scripts/smoke_dual_service.sh` 启动 Athena、fund assistant 和 fake OpenAI-compatible 模型，验证 Athena remote registry、`account_overview` callback、fund conversation trace 回写。
+- Dual-service smoke: `ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh` 与 `./scripts/smoke_dual_docker.sh` 均通过。
