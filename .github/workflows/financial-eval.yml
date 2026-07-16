@@ -1,0 +1,113 @@
+name: Financial agent evaluation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  application-safety-tests:
+    name: Application safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      - name: Race-test financial safety boundaries
+        run: go test -race -count=1 ./internal/governance ./internal/authorization ./internal/server
+
+  web-build:
+    name: Fund workspace build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: yarn
+          cache-dependency-path: apps/web/yarn.lock
+
+      - name: Install web dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build fund workspace
+        run: yarn build
+
+  deterministic-evaluation:
+    name: Deterministic financial safety gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PROMPTFOO_CACHE_ENABLED: "false"
+      PROMPTFOO_DISABLE_REMOTE_GENERATION: "true"
+      PROMPTFOO_DISABLE_SHARING: "true"
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+    defaults:
+      run:
+        working-directory: evals
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: evals/package-lock.json
+
+      - name: Install pinned evaluation dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test evaluation rules
+        run: npm test
+
+      - name: Run deterministic financial evaluation
+        id: financial-eval
+        continue-on-error: true
+        run: npm run eval:deterministic
+
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: financial-evaluation-${{ github.sha }}
+          path: |
+            evals/artifacts/results.json
+            evals/artifacts/results.junit.xml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce deterministic safety gate
+        if: steps.financial-eval.outcome == 'failure'
+        run: |
+          echo "Deterministic financial safety evaluation failed. Inspect the uploaded JSON and JUnit artifacts."
+          exit 1

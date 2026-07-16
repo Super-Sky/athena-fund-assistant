@@ -52,6 +52,10 @@ Existing single-language planning documents remain as seed drafts until they are
   - 金融建议输出治理门的中文规则、产品边界和验证证据。
 - `features/feature-financial-governance.en-US.md`
   - English rules, product boundaries, and verification evidence for the financial-output governance gate.
+- `features/feature-financial-agent-evaluation.zh-CN.md`
+  - 金融 Agent #31A 确定性评测、固定 fixture、发布门禁、产物与 Athena trace-safe 边界中文说明。
+- `features/feature-financial-agent-evaluation.en-US.md`
+  - English description of the Financial Agent #31A deterministic evaluation, fixed fixtures, release gate, artifacts, and Athena trace-safe boundary.
 - `api.zh-CN.md`
   - fund assistant MVP 后端当前已实现 API 的中文契约。
 - `api.en-US.md`

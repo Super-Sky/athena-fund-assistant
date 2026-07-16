@@ -1,0 +1,16 @@
+{
+  "name": "athena-fund-deterministic-evals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic Promptfoo release gate for Athena fund-assistant fixtures",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "test": "node scripts/check-node-version.js && node --test",
+    "eval:deterministic": "node scripts/run-deterministic-eval.js"
+  },
+  "devDependencies": {
+    "promptfoo": "0.121.19"
+  }
+}
