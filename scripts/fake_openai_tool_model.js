@@ -3,6 +3,13 @@ const http = require("http");
 let count = 0;
 const port = Number(process.env.FAKE_MODEL_PORT || "18083");
 
+function messageText(messages) {
+  return (messages || []).map(message => {
+    if (typeof message.content === "string") return message.content;
+    return JSON.stringify(message.content || "");
+  }).join("\n");
+}
+
 const server = http.createServer((req, res) => {
   let body = "";
   req.on("data", chunk => {
@@ -21,6 +28,7 @@ const server = http.createServer((req, res) => {
     res.setHeader("Content-Type", "application/json");
 
     if (!hasToolResult) {
+      const consentMatch = messageText(payload.messages).match(/consent_grant_ref=([A-Za-z0-9_-]+)/);
       res.end(JSON.stringify({
         id: `chatcmpl-fake-tool-${count}`,
         object: "chat.completion",
@@ -37,7 +45,10 @@ const server = http.createServer((req, res) => {
               type: "function",
               function: {
                 name: "account_overview",
-                arguments: JSON.stringify({ user_id: "demo-user" }),
+                arguments: JSON.stringify({
+                  user_id: "demo-user",
+                  consent_grant_ref: consentMatch ? consentMatch[1] : "",
+                }),
               },
             }],
           },

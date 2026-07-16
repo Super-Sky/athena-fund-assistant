@@ -23,7 +23,7 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - `scripts/smoke_dual_docker.sh`
   - Builds and starts the dual-service Docker topology.
   - Registers the fake model and fund remote tools.
-  - Historically verified Agent Run, remote callbacks, fund trace writeback, and CSV decision trace; after read-only consent, its service-identity step must be synchronized once Athena #24 lands.
+  - Verifies wrong-service-token denial, correct-token plus consent success, post-revocation denial, fund conversation trace writeback, artifact no-leak checks, and CSV decision trace.
 
 ## Boundaries
 
@@ -31,16 +31,18 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
 - The fake model is only for smoke tests and does not represent real model quality.
 - The CSV provider is only a local fallback and must not masquerade as licensed real-time market data.
 - Payment, subscriptions, brokerage account integration, and automatic trading are out of scope.
-- `ATHENA_FUND_REMOTE_TOOL_TOKEN` must come from local `.env` or a production secret source and no real value may be committed. `Super-Sky/Athena#24` tracks the matching secure outbound header injection.
+- `ATHENA_FUND_REMOTE_TOOL_TOKEN` must come from local `.env` or a production secret source and no real value may be committed. The catalog and Athena registration retain only the `env://ATHENA_FUND_REMOTE_TOOL_TOKEN` reference.
+- The dual-service overlay makes the Athena and fund API health checks fail closed when the token is empty without blocking lifecycle commands such as `docker compose config/down/ps/logs`.
+- Athena enables debug observability during dual-service smoke. The script exports container logs and control-plane JSON and scans them together with host artifacts for credential leaks.
 
 ## Verification
 
 - `docker compose -f docker-compose.yml -f docker-compose.dual.yml config`
 - `bash -n scripts/smoke_dual_docker.sh`
 - `git diff --check`
-- Attempted `ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh`:
-  - It completed base image pulls, Athena Dockerfile parsing, dependency download, and reached the Athena `go build` step.
-  - Local Docker's first Athena build produced no output for an extended period during `go build`, so it was manually interrupted and the `athena-fund-dual-smoke` compose resources were cleaned up.
-  - A later check showed that new `docker run --rm alpine:3.20 sh -lc 'echo ok'` and `docker run --rm golang:1.23-alpine ...` containers stayed in `Created` and never entered `Running`; this points to an unhealthy Docker Desktop new-container start path rather than deterministic fund assistant business-code failure.
-  - The test containers left in `Created` were removed, and the hung Docker CLI processes were terminated.
-  - A full smoke pass still needs to be rerun once Docker Desktop recovers, Docker cache is warm, or CI resources are more stable.
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh` passed:
+  - Compose started Athena, the fund API/web app, PostgreSQL, Redis, and the fake model.
+  - A wrong token returned `service_auth_denied`; the correct token plus an active grant completed `account_overview`.
+  - The fund conversation wrote back a completed Athena trace; a revoked grant returned `authorization_denied`.
+  - Smoke artifacts, container logs, Athena remote trace, and control-plane JSON did not contain service-token or user-session-token values.
+  - The CSV provider continued to report `temporary_data=true` and conservative/balanced/aggressive options.

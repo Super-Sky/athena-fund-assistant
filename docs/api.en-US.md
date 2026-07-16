@@ -242,6 +242,8 @@ Response fields:
 - `app_id`: currently `athena-fund-assistant`.
 - `items`: remote tools that can be registered in Athena.
 
+Each `items[]` contains `auth.type=bearer` and `auth.secret_ref=env://ATHENA_FUND_REMOTE_TOOL_TOKEN`. The catalog publishes only the secret reference; Athena and the fund assistant receive the real token independently from their runtime environments, and the value never enters registration JSON.
+
 Current read-only tools:
 
 - `account_overview`: reads the user's account overview, holdings, recent operations, and performance trend.

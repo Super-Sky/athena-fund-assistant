@@ -242,6 +242,8 @@ Agent Run 请求会把业务语义转换为通用 Athena 输入：
 - `app_id`：当前为 `athena-fund-assistant`。
 - `items`：可注册到 Athena 的 remote tool 列表。
 
+每个 `items[]` 都包含 `auth.type=bearer` 与 `auth.secret_ref=env://ATHENA_FUND_REMOTE_TOOL_TOKEN`。catalog 只发布 secret reference；真实 token 由 Athena 和 fund assistant 各自的运行时环境注入，不进入注册 JSON。
+
 当前只读工具：
 
 - `account_overview`：读取用户账户概览、持仓、近期操作和收益趋势。

@@ -38,11 +38,11 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 ## Athena Boundary
 
 - The UI and API now expose the contract shape for starting an Agent run, and the app-side Athena client writes run trace back to the conversation.
-- The fund assistant exposes Athena remote tool callbacks. Complete account callbacks require Athena to inject a separate service identity and carry the safe `consent_grant_ref` from model context.
+- The fund assistant exposes Athena remote tool callbacks. Athena injects a separate service identity for account callbacks and carries the safe `consent_grant_ref` from model context.
 - Without `ATHENA_BASE_URL`, trace shows a mock run; with external Athena configured, trace records the real Athena run_id, status, and trace_available.
 - Fund business objects, uploaded files, and business tool implementations stay in the fund assistant and are not written into Athena core.
 - Current remote tools are read-only, use `side_effect_level=none`, and do not perform automatic trading or money movement.
-- `Super-Sky/Athena#24` tracks remote-tool secret references and outbound header injection; historical dual-service smoke is not current service-authentication evidence until that capability lands.
+- `Super-Sky/Athena#24` owns remote-tool secret references and outbound header injection. Local and Docker dual-service smoke now verify wrong-token denial, correct-token success, and token no-leak.
 
 ## Verification
 
@@ -51,4 +51,4 @@ This feature moves the fund assistant from fixed form workflows toward a daily A
 - Browser smoke: workspace, skill selector, upload entry, and trace timeline are visible.
 - Server test: remote tool catalog, service identity, allowed consent, missing scope, post-revocation denial, `fund_market_snapshot`, and the unknown-tool error envelope.
 - Server test: conversation message starts an Athena mock run and writes an `athena_agent_run=ok` trace.
-- Dual-service smoke: update and rerun after `Super-Sky/Athena#24` lands so the `account_overview` callback includes service authentication.
+- Dual-service smoke: both `ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh` and `./scripts/smoke_dual_docker.sh` passed.

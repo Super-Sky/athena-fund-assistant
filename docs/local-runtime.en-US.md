@@ -86,12 +86,12 @@ go run ./cmd/api
 
 The CSV provider is a local MVP / demo fallback, not a licensed real-time market-data feed. Every CSV row must preserve `source`, `provider`, `fetched_at`, `market_time`, `timezone`, `delay`, `license_terms`, `confidence`, and `schema_version`. The sample file uses `user_supplied_csv_for_local_mvp_not_licensed_live_feed` to make the license boundary explicit.
 
-## Dual-Service Smoke (Waiting For Athena #24)
+## Dual-Service Smoke
 
-The historical local script starts Athena, the fund assistant, and a fake OpenAI-compatible model. After read-only consent, the script must wait for Athena #24 service-identity header injection before it can pass the complete path again:
+The script starts Athena, the fund assistant, and a fake OpenAI-compatible model, and generates a service token used only for that smoke run:
 
 ```bash
-ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh
 ```
 
 The script's target checks are:
@@ -100,10 +100,13 @@ The script's target checks are:
 - The fund assistant `/internal/tools/catalog` emits `account_overview` / `fund_market_snapshot` remote tool registrations.
 - Athena `/api/control-plane/remote-tools/:name` accepts both read-only tools.
 - The fake model triggers an `account_overview` tool call.
-- Athena calls back into the fund assistant `/internal/tools/execute` through `remote_tool_execution.v1`.
+- A wrong service token returns `service_auth_denied` before consent evaluation.
+- Athena resolves the correct token per invocation through `env://ATHENA_FUND_REMOTE_TOOL_TOKEN` and calls `/internal/tools/execute` through `remote_tool_execution.v1`.
+- An active consent grant allows the account read; a revoked grant returns stable `authorization_denied`.
 - A fund conversation message gets an `athena_agent_run=ok` trace with `run_status=completed`, `tool_call_count=1`, and `output_present=true`.
+- Registration, trace, and smoke artifacts do not contain the service-token value.
 
-This smoke does not require a real model API key. With read-only consent enabled, a complete remote callback also requires Athena to inject a separate service identity securely; [Super-Sky/Athena#24](https://github.com/Super-Sky/Athena/issues/24) tracks that capability. Until #24 lands and the smoke scripts are synchronized, historical smoke results are not evidence of current production-grade service authentication.
+This smoke does not require a real model API key. Each process receives the service identity from its own runtime environment, while the catalog and persistence retain only the secret reference. Production deployments should use a secret manager to inject the environment variable safely.
 
 PostgreSQL store integration test:
 
@@ -141,7 +144,8 @@ Default ports:
 Use the overlay to start Athena, the fund assistant, PostgreSQL, Redis, the web app, and a fake OpenAI-compatible model in one Docker Compose project:
 
 ```bash
-ATHENA_REPO=../Athena-remote-tools \
+ATHENA_REPO=../Athena \
+ATHENA_FUND_REMOTE_TOOL_TOKEN="$(openssl rand -hex 32)" \
 docker compose -f docker-compose.yml -f docker-compose.dual.yml up --build
 ```
 
@@ -154,13 +158,13 @@ Default ports:
 
 The dual-service overlay points the fund assistant API at `ATHENA_BASE_URL=http://athena-api:8080` and enables the CSV provider by default with `ATHENA_FUND_PROVIDER=csv` plus `ATHENA_FUND_CSV_PATH=/app/examples/market-data-sample.csv`. CSV data remains a local MVP / demo fallback, not a licensed real-time market-data feed.
 
-End-to-end Docker smoke, after Athena #24 lands and the script is synchronized:
+End-to-end Docker smoke:
 
 ```bash
-ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_docker.sh
+ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh
 ```
 
-The script is intended to build and start the dual-service Docker topology, register the fake model and fund remote tools, then verify service-authenticated and consent-protected Agent Run callbacks, fund conversation trace writeback, and CSV provider decision trace. The first Athena image build can be slow; later runs reuse the Docker cache.
+The script builds and starts the dual-service Docker topology, registers the fake model and fund remote tools, then verifies wrong-service-token denial, correct-token plus consent Agent Runs, post-revocation denial, fund conversation trace writeback, artifact no-leak checks, and CSV provider decision trace. The first Athena image build can be slow; later runs reuse the Docker cache.
 
 ## Current Boundaries
 
@@ -169,8 +173,9 @@ The script is intended to build and start the dual-service Docker topology, regi
 - The API reads `ATHENA_FUND_PROVIDER`; unset or `mock` uses `mock_provider`, while `csv` reads `ATHENA_FUND_CSV_PATH`.
 - The API reads `ATHENA_BASE_URL` and optional `ATHENA_AUTH_TOKEN`; when unset, it uses the mock Athena client for single-service demos.
 - The API reads `ATHENA_FUND_LOCAL_AUTH_SUBJECT` as the only subject accepted by the local session issuer; it defaults to `demo-user`.
-- The API reads `ATHENA_FUND_REMOTE_TOOL_TOKEN` to validate the Bearer service identity on Athena callbacks. Production deployments must inject it from a secret manager or Docker secret and must not commit a real value.
+- The API reads `ATHENA_FUND_REMOTE_TOOL_TOKEN` to validate the Bearer service identity on Athena callbacks. Dual-service Compose requires a non-empty value; production deployments must inject the environment variable through a secret manager and must not commit a real value.
 - The dual-service Docker overlay also reads `ATHENA_REPO`, `ATHENA_DUAL_API_PORT`, `ATHENA_FAKE_MODEL_PORT`, `ATHENA_FUND_PROVIDER`, and `ATHENA_FUND_CSV_PATH`.
+- When `ATHENA_FUND_REMOTE_TOOL_TOKEN` is empty, the dual-service overlay makes the Athena and fund API health checks fail closed; Compose lifecycle commands such as `config/down/ps/logs` remain directly usable.
 - Mock / CSV data must continue to be marked as temporary or user-supplied in UI / trace output.
 - The current web app still calls only the fund assistant API. The fund assistant API starts an Agent Run through the Athena client after user messages and exposes read-only remote business tools through `/internal/tools/execute` for Athena callbacks.
 - The web app keeps the current local session token only in memory. Agent Runs, tool arguments, and trace metadata receive only the non-secret `consent_grant_ref`.

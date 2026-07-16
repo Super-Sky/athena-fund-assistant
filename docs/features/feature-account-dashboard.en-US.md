@@ -31,10 +31,11 @@ This feature moves the fund assistant from a one-off fund analysis page toward a
 
 - Link the already persistent journal/review records to accounts and holdings.
 - Connect account holdings to real data providers and replace mock/demo prices and FX.
-- Complete consent-protected cross-service account reads after Athena #24 adds service-identity header injection.
+- Connect the verified service-identity plus consent account-read path to real account data providers; account prices and FX are still mock/demo data.
 
 ## Verification
 
 - `go test ./...`
 - `ATHENA_FUND_PG_TEST_DSN=... go test ./internal/account -run TestPostgresStoreOverviewAndReplaceHoldings -count=1`
 - `yarn build` in `apps/web`
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh`

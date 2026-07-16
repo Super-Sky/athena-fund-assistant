@@ -23,7 +23,7 @@ services:
 
   athena-api:
     build:
-      context: "${ATHENA_REPO:-../Athena-remote-tools}"
+      context: "${ATHENA_REPO:-../Athena}"
       dockerfile: Dockerfile
     environment:
       HTTP_PORT: "8080"
@@ -33,17 +33,19 @@ services:
       CONTROL_PLANE_ALLOWED_ORIGINS: "http://localhost:${ATHENA_FUND_WEB_PORT:-5173},http://127.0.0.1:${ATHENA_FUND_WEB_PORT:-5173}"
       REMOTE_TOOL_ALLOWED_ORIGINS: "http://api:8081"
       REMOTE_TOOL_MAX_RESPONSE_BYTES: "1048576"
-      OBSERVABILITY_LOG_LEVEL: info
+      ATHENA_FUND_REMOTE_TOOL_TOKEN: "${ATHENA_FUND_REMOTE_TOOL_TOKEN:-}"
+      ATHENA_FUND_REMOTE_TOOL_WRONG_TOKEN: "${ATHENA_FUND_REMOTE_TOOL_WRONG_TOKEN:-}"
+      OBSERVABILITY_LOG_LEVEL: debug
     ports:
       - "${ATHENA_DUAL_API_PORT:-8080}:8080"
     depends_on:
       fake-openai:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "/app/athena", "healthcheck"]
-      interval: 5s
+      test: ["CMD-SHELL", "test -n \"$${ATHENA_FUND_REMOTE_TOOL_TOKEN}\" && /app/athena healthcheck"]
+      interval: 2s
       timeout: 3s
-      retries: 30
+      retries: 10
     volumes:
       - athena_dual_controlplane:/app/config/controlplane
       - athena_dual_shared:/srv/shared
@@ -51,6 +53,7 @@ services:
   api:
     environment:
       ATHENA_BASE_URL: "http://athena-api:8080"
+      ATHENA_FUND_REMOTE_TOOL_TOKEN: "${ATHENA_FUND_REMOTE_TOOL_TOKEN:-}"
       ATHENA_FUND_PROVIDER: "${ATHENA_FUND_PROVIDER:-csv}"
       ATHENA_FUND_CSV_PATH: "${ATHENA_FUND_CSV_PATH:-/app/examples/market-data-sample.csv}"
     depends_on:
@@ -60,6 +63,11 @@ services:
         condition: service_healthy
       athena-api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -n \"$${ATHENA_FUND_REMOTE_TOOL_TOKEN}\" && wget -q -O - http://127.0.0.1:8081/readyz"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
 
   web:
     depends_on:
