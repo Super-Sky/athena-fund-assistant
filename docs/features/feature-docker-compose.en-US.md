@@ -41,7 +41,7 @@ This feature provides the local Docker runtime path for the fund assistant MVP a
   - `docker compose up -d --build` completed successfully.
   - Web, API, PostgreSQL, and Redis reached healthy status.
   - `GET http://127.0.0.1:8081/readyz` returned `{"status":"ready"}` and the fund analysis endpoint returned a three-option matrix with a `passed` governance decision.
-- `ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_docker.sh` passed:
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh` passed; the variable may also target the Athena feature worktree under validation:
   - Athena completed an Agent Run with the registered `account_overview` remote business tool.
   - A fund conversation recorded a completed Athena trace with one tool call and output present.
   - Fund analysis used `csv_provider`, marked the user-supplied local-data boundary and temporary-data state, and returned conservative, balanced, and aggressive options.

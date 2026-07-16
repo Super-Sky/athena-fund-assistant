@@ -41,7 +41,7 @@
   - `docker compose up -d --build` 已成功完成。
   - Web、API、PostgreSQL 和 Redis 均进入 healthy 状态。
   - `GET http://127.0.0.1:8081/readyz` 返回 `{"status":"ready"}`，基金分析接口返回三档 matrix，且治理结论为 `passed`。
-- `ATHENA_REPO=/Users/maxt/Desktop/maxt/Athena-remote-tools ./scripts/smoke_dual_docker.sh` 已通过：
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh` 已通过；也可指向待验证的 Athena 功能 worktree：
   - Athena 成功完成 Agent Run，并调用已注册的 `account_overview` remote business tool。
   - fund 对话记录了 completed Athena trace，包含一次 tool call 和已存在的输出。
   - fund 分析使用 `csv_provider`，正确标记用户提供本地数据的边界与临时数据状态，并返回稳健、均衡、激进三档方案。
