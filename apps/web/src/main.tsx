@@ -1,5 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  BookOpen,
+  Check,
+  Database,
+  FileText,
+  Gauge,
+  LineChart,
+  MessageSquare,
+  Paperclip,
+  PieChart,
+  Play,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  WalletCards,
+  type LucideIcon
+} from "lucide-react";
 import "./styles.css";
 
 type RiskPreference = "conservative" | "balanced" | "aggressive";
@@ -354,28 +375,28 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const LOCAL_USER_ID = "demo-user";
 const ACCOUNT_READ_SCOPES = ["fund.account.summary.read", "fund.holding.snapshot.read"];
 
-const navigationGroups: { label: string; items: { key: PageKey; label: string; caption: string }[] }[] = [
+const navigationGroups: { label: string; items: { key: PageKey; label: string; caption: string; icon: LucideIcon }[] }[] = [
   {
     label: "工作台",
     items: [
-      { key: "conversation", label: "对话", caption: "日常分析与复盘" },
-      { key: "analysis", label: "策略分析", caption: "三档决策与记录" }
+      { key: "conversation", label: "对话", caption: "日常分析与复盘", icon: MessageSquare },
+      { key: "analysis", label: "策略分析", caption: "三档决策与记录", icon: Sparkles }
     ]
   },
   {
     label: "我的账户",
     items: [
-      { key: "overview", label: "账户总览", caption: "资产与累计收益" },
-      { key: "holdings", label: "持仓", caption: "仓位与盈亏" },
-      { key: "performance", label: "收益趋势", caption: "近期操作表现" }
+      { key: "overview", label: "账户总览", caption: "资产与累计收益", icon: Gauge },
+      { key: "holdings", label: "持仓", caption: "仓位与盈亏", icon: PieChart },
+      { key: "performance", label: "收益趋势", caption: "近期操作表现", icon: LineChart }
     ]
   },
   {
     label: "Agent 配置",
     items: [
-      { key: "preferences", label: "偏好与 Agent", caption: "风险边界与沟通方式" },
-      { key: "knowledge", label: "策略知识库", caption: "规则、版本与审计" },
-      { key: "access", label: "数据与授权", caption: "只读范围和数据状态" }
+      { key: "preferences", label: "偏好与 Agent", caption: "风险边界与沟通方式", icon: Settings2 },
+      { key: "knowledge", label: "策略知识库", caption: "规则、版本与审计", icon: BookOpen },
+      { key: "access", label: "数据与授权", caption: "只读范围和数据状态", icon: ShieldCheck }
     ]
   }
 ];
@@ -794,7 +815,7 @@ function App() {
     <div className="product-shell">
       <aside className="side-navigation">
         <div className="brand-mark">
-          <span className="brand-symbol">A</span>
+          <span className="brand-symbol"><Sparkles aria-hidden="true" size={17} strokeWidth={1.9} /></span>
           <div>
             <strong>Athena Fund</strong>
             <span>投资决策助手</span>
@@ -804,18 +825,21 @@ function App() {
           {navigationGroups.map((group) => (
             <div className="navigation-group" key={group.label}>
               <span className="navigation-label">{group.label}</span>
-              {group.items.map((item) => (
-                <button
-                  aria-current={activePage === item.key ? "page" : undefined}
-                  className={activePage === item.key ? "navigation-item active" : "navigation-item"}
-                  key={item.key}
-                  onClick={() => setActivePage(item.key)}
-                  type="button"
-                >
-                  <strong>{item.label}</strong>
-                  <span>{item.caption}</span>
-                </button>
-              ))}
+              {group.items.map((item) => {
+                const NavigationIcon = item.icon;
+                return (
+                  <button
+                    aria-current={activePage === item.key ? "page" : undefined}
+                    className={activePage === item.key ? "navigation-item active" : "navigation-item"}
+                    key={item.key}
+                    onClick={() => setActivePage(item.key)}
+                    type="button"
+                  >
+                    <NavigationIcon aria-hidden="true" size={16} strokeWidth={1.8} />
+                    <span className="navigation-copy"><strong>{item.label}</strong><small>{item.caption}</small></span>
+                  </button>
+                );
+              })}
             </div>
           ))}
         </nav>
@@ -836,9 +860,9 @@ function App() {
           <p className="page-caption">{activePageInfo.caption}</p>
         </div>
         <div className="status-strip" aria-label="runtime status">
-          <StatusPill icon="shield" label="可追溯分析" tone="blue" />
-          <StatusPill icon="database" label="数据待验证" tone="amber" />
-          <StatusPill icon="check" label="只读建议" tone="green" />
+          <StatusPill icon="shield" label="可追溯" tone="blue" />
+          <StatusPill icon="database" label="演示数据" tone="amber" />
+          <StatusPill icon="check" label="只读模式" tone="green" />
         </div>
       </header>
 
@@ -1292,7 +1316,7 @@ function AgentWorkspace({
   return (
     <section className="agent-workspace">
       <div className="agent-chat">
-        <PanelTitle icon="activity" title="Agent 对话" caption="选择 skill，上传材料，发起日常基金复盘" />
+        <PanelTitle icon="activity" title="Agent 对话" caption="带着账户上下文开始今天的分析" />
         <div className="agent-controls">
           <label className="field">
             <span>Skill</span>
@@ -1305,7 +1329,7 @@ function AgentWorkspace({
             </select>
           </label>
           <label className="upload-button">
-            <Icon name="database" />
+            <Paperclip aria-hidden="true" size={16} strokeWidth={1.9} />
             {!conversation ? "初始化中" : uploading ? "上传中" : "上传图片/文件"}
             <input
               accept={acceptedAttachmentTypes}
@@ -1326,7 +1350,7 @@ function AgentWorkspace({
         <div className="message-list">
           {(conversation?.messages ?? []).length > 0 ? (
             conversation?.messages.map((message) => (
-              <div className="message-row" key={message.id}>
+              <div className={`message-row ${message.role}`} key={message.id}>
                 <strong>{message.role}</strong>
                 <span>{message.content}</span>
               </div>
@@ -1338,14 +1362,15 @@ function AgentWorkspace({
             </div>
           )}
         </div>
-        <label className="field">
-          <span>消息</span>
-          <textarea value={input} onChange={(event) => onInputChange(event.target.value)} />
-        </label>
-        <button className="primary-action" disabled={!conversation || sending} onClick={onSend} type="button">
-          <Icon name="play" />
-          {sending ? "发送中" : "发送到 Agent"}
-        </button>
+        <div className="agent-composer">
+          <label className="field">
+            <span className="visually-hidden">消息</span>
+            <textarea aria-label="发送给 Agent 的消息" placeholder="询问持仓、市场变化或本周复盘重点" value={input} onChange={(event) => onInputChange(event.target.value)} />
+          </label>
+          <button aria-label={sending ? "正在发送" : "发送消息"} className="composer-send" disabled={!conversation || sending} onClick={onSend} title={sending ? "正在发送" : "发送消息"} type="button">
+            <Send aria-hidden="true" size={18} strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       <div className="agent-side">
@@ -1511,7 +1536,19 @@ function StatusPill({ icon, label, tone }: { icon: IconName; label: string; tone
 }
 
 function Icon({ name }: { name: IconName }) {
-  return <span aria-hidden="true" className={`ui-icon ${name}`} />;
+  const icons: Record<IconName, LucideIcon> = {
+    activity: Activity,
+    alert: AlertTriangle,
+    bar: BarChart3,
+    check: Check,
+    database: Database,
+    note: FileText,
+    play: Play,
+    shield: ShieldCheck,
+    wallet: WalletCards
+  };
+  const IconComponent = icons[name];
+  return <IconComponent aria-hidden="true" className="ui-icon" size={16} strokeWidth={1.9} />;
 }
 
 function NumberField({

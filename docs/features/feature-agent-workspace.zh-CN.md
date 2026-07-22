@@ -27,6 +27,7 @@
 - `apps/web`
   - 以 Agent 对话作为默认首页，展示账户核心上下文、skill selector、文件上传、消息列表、附件状态和 trace timeline。
   - 账户、持仓、收益、策略分析、偏好、知识库和数据授权拆分为独立导航页面，仅保留核心数据与核心配置。
+  - 使用分组 Lucide 导航和对话 composer，保留明确的附件操作，并以带无障碍名称的图标按钮发送消息；附件/trace 辅助栏不抢占对话主任务。
 
 ## 上传边界
 
@@ -49,7 +50,7 @@
 
 - `go test ./...`
 - `yarn build` in `apps/web`
-- Browser smoke: 对话默认打开，skill selector、上传入口和 trace timeline 可见；桌面与移动导航无横向页面溢出。
+- 1440px 与 390px Browser smoke：对话默认打开，skill selector、上传入口、composer 和 trace timeline 可见；桌面与移动导航无横向页面溢出，浏览器 console 无错误。
 - Server test: remote tool catalog、服务身份、授权成功、缺 scope、撤销后拒绝、`fund_market_snapshot` 和 unknown-tool error envelope。
 - Server test: conversation message starts Athena mock run and writes `athena_agent_run=ok` trace。
 - Dual-service smoke: 等待 `Super-Sky/Athena#24` 合入后更新并重跑，以验证带服务身份的 `account_overview` callback。
