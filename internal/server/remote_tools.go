@@ -8,7 +8,17 @@ import (
 	"github.com/Super-Sky/athena-fund-assistant/internal/authorization"
 )
 
-const remoteToolContractVersion = "remote_tool_execution.v1"
+const (
+	remoteToolContractVersion = "remote_tool_execution.v1"
+	remoteToolSecretRef       = "env://ATHENA_FUND_REMOTE_TOOL_TOKEN"
+)
+
+// remoteToolAuth publishes an indirect service-credential reference without exposing its value.
+// remoteToolAuth 发布间接服务凭证引用，不暴露凭证值。
+type remoteToolAuth struct {
+	Type      string `json:"type"`
+	SecretRef string `json:"secret_ref"`
+}
 
 type remoteToolRegistration struct {
 	RegistrationID   string         `json:"registration_id"`
@@ -17,6 +27,7 @@ type remoteToolRegistration struct {
 	Description      string         `json:"description,omitempty"`
 	Parameters       map[string]any `json:"parameters,omitempty"`
 	Endpoint         string         `json:"endpoint"`
+	Auth             remoteToolAuth `json:"auth"`
 	ToolScope        string         `json:"tool_scope,omitempty"`
 	Operation        string         `json:"operation,omitempty"`
 	RiskLevel        string         `json:"risk_level,omitempty"`
@@ -87,6 +98,7 @@ func (s *Server) handleRemoteToolCatalog(w http.ResponseWriter, r *http.Request)
 					"consent_grant_ref": stringSchema("Opaque read-only consent grant reference from the conversation context."),
 				}, []string{"user_id", "consent_grant_ref"}),
 				Endpoint:         endpoint,
+				Auth:             remoteToolAuth{Type: "bearer", SecretRef: remoteToolSecretRef},
 				ToolScope:        "fund.account.summary.read",
 				Operation:        "read_account_overview",
 				RiskLevel:        "low",
@@ -108,6 +120,7 @@ func (s *Server) handleRemoteToolCatalog(w http.ResponseWriter, r *http.Request)
 				Description:      "Read a normalized fund or ETF snapshot with source, freshness, timezone, delay, license, and confidence metadata.",
 				Parameters:       objectSchema(map[string]any{"instrument_code": stringSchema("Fund, ETF, or mock-provider-supported instrument code.")}, []string{"instrument_code"}),
 				Endpoint:         endpoint,
+				Auth:             remoteToolAuth{Type: "bearer", SecretRef: remoteToolSecretRef},
 				ToolScope:        "fund.market.read",
 				Operation:        "read_fund_market_snapshot",
 				RiskLevel:        "low",

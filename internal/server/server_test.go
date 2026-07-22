@@ -319,6 +319,11 @@ func TestRemoteToolCatalogAndExecution(t *testing.T) {
 	if catalog.Items[0].Endpoint != "http://127.0.0.1:8081/internal/tools/execute" {
 		t.Fatalf("unexpected endpoint %q", catalog.Items[0].Endpoint)
 	}
+	for _, item := range catalog.Items {
+		if item.Auth.Type != "bearer" || item.Auth.SecretRef != remoteToolSecretRef {
+			t.Fatalf("unexpected remote tool auth contract for %s: %#v", item.Name, item.Auth)
+		}
+	}
 
 	overviewRR := performJSON(t, srv, http.MethodPost, "/internal/tools/execute", remoteToolExecutionRequest{
 		ContractVersion: remoteToolContractVersion,

@@ -30,7 +30,7 @@ The migration contains no plaintext token, password, API-key, or brokerage-crede
 
 The fund assistant validates Athena remote callbacks with the Bearer service identity in `ATHENA_FUND_REMOTE_TOOL_TOKEN`. This token comes only from the HTTP header and never enters tool arguments, model context, or trace data.
 
-Athena still needs secure remote-tool secret references and outbound header injection, tracked by [Super-Sky/Athena#24](https://github.com/Super-Sky/Athena/issues/24). Until that platform capability lands, the fund-side authorization loop can be verified independently, but a real cross-service Athena account-tool call is not production-ready.
+The remote tool catalog publishes only the `env://ATHENA_FUND_REMOTE_TOOL_TOKEN` reference. Athena resolves and injects the token at the outbound HTTP boundary, and the fund assistant validates the service identity before consent checks. Registration, trace, and smoke artifacts never store the token value. [Super-Sky/Athena#24](https://github.com/Super-Sky/Athena/issues/24) owns the platform implementation.
 
 ## Verification
 
@@ -38,9 +38,11 @@ Athena still needs secure remote-tool secret references and outbound header inje
 - `go test -race -count=1 ./internal/authorization`
 - `go vet ./internal/authorization`
 - `yarn build` in `apps/web`
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh`
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh`
 - Browser smoke: local session bootstrap, grant create/revoke state changes, conversation send, and the mobile viewport layout passed with no console warning/error.
 
-Server tests cover session issue/revocation, cross-user denial, grant create/list/revoke, service-identity denial, missing-scope denial, successful authorization, post-revocation denial, and raw-credential exclusion from audit output.
+Server tests cover session issue/revocation, cross-user denial, grant create/list/revoke, service-identity denial, missing-scope denial, successful authorization, post-revocation denial, and raw-credential exclusion from audit output. Dual-service smoke additionally covers wrong-service-token denial, correct-token plus active-grant success, post-revocation denial, conversation trace writeback, and artifact no-leak checks.
 
 ## Non-Goals
 

@@ -31,10 +31,11 @@
 
 - 将 journal/review 从内存 store 迁移到持久化 store，并关联账户/持仓。
 - 将账户持仓与真实数据 provider 连接，替换 mock/demo 价格和汇率。
-- 在 Athena #24 补齐服务身份 header 注入后，完成受 consent 保护的跨服务账户读取联调。
+- 继续把已通过联调的服务身份 + consent 账户读取接入真实账户数据 provider；当前账户价格与汇率仍是 mock/demo。
 
 ## 验证
 
 - `go test ./...`
 - `ATHENA_FUND_PG_TEST_DSN=... go test ./internal/account -run TestPostgresStoreOverviewAndReplaceHoldings -count=1`
 - `yarn build` in `apps/web`
+- `ATHENA_REPO=../Athena ./scripts/smoke_dual_docker.sh`

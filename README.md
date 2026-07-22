@@ -67,7 +67,7 @@ This repository now contains the first local Go API slice for the fund assistant
 - conservative / balanced / aggressive decision matrix
 - durable decision journal and review task when `DATABASE_URL` is configured
 
-The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard, decision journal, sessions, consent grants, and authorization audits use PostgreSQL when `DATABASE_URL` is configured and fall back to explicit in-memory demo stores otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client and read-only remote business tools. Production-grade outbound service authentication for the full dual-service callback remains tracked in `Super-Sky/Athena#24`. Real data providers and persistent preference/knowledge storage remain active MVP work.
+The current implementation is still local-first and mock-data-backed. Docker Compose starts the web console, API, PostgreSQL, and Redis. The account dashboard, decision journal, sessions, consent grants, and authorization audits use PostgreSQL when `DATABASE_URL` is configured and fall back to explicit in-memory demo stores otherwise. Account market data is still explicitly marked as temporary mock data. Athena integration now has an app-side Agent Run client plus service-authenticated, consent-protected read-only remote tools. Real data providers and persistent preference/knowledge storage remain active MVP work.
 
 ## Local Run
 
@@ -102,5 +102,5 @@ npm run eval:deterministic
 Dual-service Athena smoke:
 
 ```bash
-ATHENA_REPO=../Athena-remote-tools ./scripts/smoke_dual_service.sh
+ATHENA_REPO=../Athena ./scripts/smoke_dual_service.sh
 ```
