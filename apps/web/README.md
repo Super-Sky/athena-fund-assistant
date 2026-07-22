@@ -40,6 +40,6 @@ yarn build
 - `src/main.tsx`
   - Implements local session bootstrap, explicit read-only consent, the account dashboard, Agent workspace with skill/upload controls, profile and holding input, analysis, strategy cards, trace display, and journal creation.
 - `src/styles.css`
-  - Defines the responsive operational UI styling and CSS-only icon system.
+  - Defines the responsive, conversation-first operational UI styling. Shared interface icons come from `lucide-react`.
 - `src/vite-env.d.ts`
   - Provides Vite client-side type references.

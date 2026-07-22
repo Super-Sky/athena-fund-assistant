@@ -1,9 +1,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  BookOpen,
+  Check,
+  Database,
+  FileText,
+  Gauge,
+  LineChart,
+  MessageSquare,
+  Paperclip,
+  PieChart,
+  Play,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  WalletCards,
+  type LucideIcon
+} from "lucide-react";
 import "./styles.css";
 
 type RiskPreference = "conservative" | "balanced" | "aggressive";
 type IconName = "activity" | "alert" | "bar" | "check" | "database" | "note" | "play" | "shield" | "wallet";
+type PageKey = "conversation" | "overview" | "holdings" | "performance" | "analysis" | "preferences" | "knowledge" | "access";
 
 const acceptedAttachmentTypes = "image/*,.pdf,.csv,.txt,text/plain,text/csv,application/pdf,application/vnd.ms-excel";
 
@@ -353,6 +375,32 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const LOCAL_USER_ID = "demo-user";
 const ACCOUNT_READ_SCOPES = ["fund.account.summary.read", "fund.holding.snapshot.read"];
 
+const navigationGroups: { label: string; items: { key: PageKey; label: string; caption: string; icon: LucideIcon }[] }[] = [
+  {
+    label: "工作台",
+    items: [
+      { key: "conversation", label: "对话", caption: "日常分析与复盘", icon: MessageSquare },
+      { key: "analysis", label: "策略分析", caption: "三档决策与记录", icon: Sparkles }
+    ]
+  },
+  {
+    label: "我的账户",
+    items: [
+      { key: "overview", label: "账户总览", caption: "资产与累计收益", icon: Gauge },
+      { key: "holdings", label: "持仓", caption: "仓位与盈亏", icon: PieChart },
+      { key: "performance", label: "收益趋势", caption: "近期操作表现", icon: LineChart }
+    ]
+  },
+  {
+    label: "Agent 配置",
+    items: [
+      { key: "preferences", label: "偏好与 Agent", caption: "风险边界与沟通方式", icon: Settings2 },
+      { key: "knowledge", label: "策略知识库", caption: "规则、版本与审计", icon: BookOpen },
+      { key: "access", label: "数据与授权", caption: "只读范围和数据状态", icon: ShieldCheck }
+    ]
+  }
+];
+
 const presets: InstrumentPreset[] = [
   {
     code: "510300",
@@ -409,6 +457,7 @@ function holdingFromPreset(preset: InstrumentPreset): PortfolioHolding {
 }
 
 function App() {
+  const [activePage, setActivePage] = useState<PageKey>("conversation");
   const [instrumentCode, setInstrumentCode] = useState(presets[0].code);
   const [profile, setProfile] = useState<InvestorProfile>(defaultProfile);
   const [holding, setHolding] = useState<PortfolioHolding>(holdingFromPreset(presets[0]));
@@ -760,31 +809,79 @@ function App() {
     }
   }
 
+  const activePageInfo = navigationGroups.flatMap((group) => group.items).find((item) => item.key === activePage)!;
+
   return (
-    <main className="app-shell">
+    <div className="product-shell">
+      <aside className="side-navigation">
+        <div className="brand-mark">
+          <span className="brand-symbol"><Sparkles aria-hidden="true" size={17} strokeWidth={1.9} /></span>
+          <div>
+            <strong>Athena Fund</strong>
+            <span>投资决策助手</span>
+          </div>
+        </div>
+        <nav aria-label="主导航">
+          {navigationGroups.map((group) => (
+            <div className="navigation-group" key={group.label}>
+              <span className="navigation-label">{group.label}</span>
+              {group.items.map((item) => {
+                const NavigationIcon = item.icon;
+                return (
+                  <button
+                    aria-current={activePage === item.key ? "page" : undefined}
+                    className={activePage === item.key ? "navigation-item active" : "navigation-item"}
+                    key={item.key}
+                    onClick={() => setActivePage(item.key)}
+                    type="button"
+                  >
+                    <NavigationIcon aria-hidden="true" size={16} strokeWidth={1.8} />
+                    <span className="navigation-copy"><strong>{item.label}</strong><small>{item.caption}</small></span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-account">
+          <span className={authSession ? "state-dot active" : "state-dot"} />
+          <div>
+            <strong>{accountOverview?.account.display_name ?? "账户加载中"}</strong>
+            <span>{activeConsent ? "只读数据已授权" : "数据未授权"}</span>
+          </div>
+        </div>
+      </aside>
+
+      <main className="app-shell">
       <header className="topbar">
         <div>
           <p className="eyebrow">Athena Fund Assistant</p>
-          <h1>基金研究决策台</h1>
+          <h1>{activePageInfo.label}</h1>
+          <p className="page-caption">{activePageInfo.caption}</p>
         </div>
         <div className="status-strip" aria-label="runtime status">
-          <StatusPill icon="shield" label="可追溯分析" tone="blue" />
-          <StatusPill icon="database" label="数据待验证" tone="amber" />
-          <StatusPill icon="check" label="只读建议" tone="green" />
+          <StatusPill icon="shield" label="可追溯" tone="blue" />
+          <StatusPill icon="database" label="演示数据" tone="amber" />
+          <StatusPill icon="check" label="只读模式" tone="green" />
         </div>
       </header>
 
-      <AuthorizationPanel
+      {activePage === "access" ? <AuthorizationPanel
         activeConsent={activeConsent}
         busy={savingConsent}
         onCreate={createConsent}
         onRevoke={revokeConsent}
         session={authSession}
-      />
+      /> : null}
 
-      <AccountDashboard overview={accountOverview} loading={loadingAccount} />
+      {activePage === "overview" ? <AccountDashboard overview={accountOverview} loading={loadingAccount} /> : null}
 
-      <AgentWorkspace
+      {activePage === "holdings" ? <HoldingsPage overview={accountOverview} /> : null}
+
+      {activePage === "performance" ? <PerformancePage overview={accountOverview} /> : null}
+
+      {activePage === "conversation" ? <ConversationPage overview={accountOverview}>
+        <AgentWorkspace
         conversation={conversation}
         input={chatInput}
         onInputChange={setChatInput}
@@ -795,18 +892,21 @@ function App() {
         sending={sendingMessage}
         skills={skills}
         uploading={uploadingAttachment}
-      />
+        />
+      </ConversationPage> : null}
 
-      <KnowledgeWorkspacePanel
+      {activePage === "preferences" ? <PreferencePanel knowledge={knowledge} /> : null}
+
+      {activePage === "knowledge" ? <KnowledgeWorkspacePanel
         draft={knowledgeDraft}
         knowledge={knowledge}
         saving={savingKnowledge}
         onActivate={activateKnowledge}
         onDraftChange={setKnowledgeDraft}
         onSaveDraft={saveKnowledgeDraft}
-      />
+      /> : null}
 
-      <section className="workspace">
+      {activePage === "analysis" ? <section className="workspace">
         <form className="control-panel" onSubmit={runAnalysis}>
           <PanelTitle icon="wallet" title="输入" caption="用户画像与单标的持仓" />
 
@@ -943,8 +1043,123 @@ function App() {
             <EmptyState />
           )}
         </section>
-      </section>
-    </main>
+      </section> : null}
+      {error ? (
+        <div className="global-error" role="alert">
+          <Icon name="alert" />
+          {error}
+        </div>
+      ) : null}
+      </main>
+    </div>
+  );
+}
+
+function ConversationPage({ children, overview }: { children: React.ReactNode; overview: AccountOverview | null }) {
+  return (
+    <section className="conversation-page">
+      <div className="conversation-context" aria-label="账户上下文">
+        <div>
+          <span>总资产</span>
+          <strong>{overview ? formatCurrency(overview.total_market_value, overview.base_currency) : "-"}</strong>
+        </div>
+        <div>
+          <span>累计收益</span>
+          <strong className={overview && overview.total_pnl >= 0 ? "positive" : "negative"}>
+            {overview ? signedPct(overview.total_pnl_pct) : "-"}
+          </strong>
+        </div>
+        <div>
+          <span>持仓</span>
+          <strong>{overview?.holdings.length ?? 0} 项</strong>
+        </div>
+        <div>
+          <span>数据状态</span>
+          <strong>{overview?.trace.mock_data_temporary ? "演示数据" : "实时数据"}</strong>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function HoldingsPage({ overview }: { overview: AccountOverview | null }) {
+  return (
+    <section className="data-page">
+      <div className="data-page-header">
+        <div>
+          <h2>当前持仓</h2>
+          <p>按仓位查看市值、未实现盈亏和数据授权状态。</p>
+        </div>
+        <span>{overview?.holdings.length ?? 0} 项资产</span>
+      </div>
+      <div className="holdings-table" role="table" aria-label="当前持仓">
+        <div className="holdings-table-head" role="row">
+          <span>标的</span><span>市值</span><span>仓位</span><span>未实现盈亏</span><span>数据</span>
+        </div>
+        {(overview?.holdings ?? []).map((holding) => (
+          <div className="holdings-table-row" role="row" key={holding.id}>
+            <div><strong>{holding.instrument_code}</strong><span>{holding.instrument_name}</span></div>
+            <div><strong>{formatCurrency(holding.base_market_value, overview!.base_currency)}</strong><span>{holding.market} · {holding.currency}</span></div>
+            <strong>{formatPct(holding.allocation_pct)}</strong>
+            <div><strong className={holding.unrealized_pnl >= 0 ? "positive" : "negative"}>{signedPct(holding.unrealized_pnl_pct)}</strong><span>{formatCurrency(holding.unrealized_pnl, overview!.base_currency)}</span></div>
+            <span className="table-status">{holding.data_authorization}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PerformancePage({ overview }: { overview: AccountOverview | null }) {
+  const points = overview?.performance_trend ?? [];
+  const maximum = Math.max(...points.map((point) => Math.abs(point.total_pnl_pct)), 1);
+  return (
+    <section className="data-page">
+      <div className="performance-summary">
+        <Metric label="累计收益" tone={(overview?.total_pnl ?? 0) >= 0 ? "up" : "down"} value={overview ? signedPct(overview.total_pnl_pct) : "-"} />
+        <Metric label="累计盈亏" tone={(overview?.total_pnl ?? 0) >= 0 ? "up" : "down"} value={overview ? formatCurrency(overview.total_pnl, overview.base_currency) : "-"} />
+        <Metric label="近期操作收益" tone={(overview?.recent_operation_pnl ?? 0) >= 0 ? "up" : "down"} value={overview ? formatCurrency(overview.recent_operation_pnl, overview.base_currency) : "-"} />
+      </div>
+      <div className="performance-chart" aria-label="收益趋势图">
+        <div className="chart-title"><h2>收益趋势</h2><span>最近 {points.length} 个快照</span></div>
+        <div className="chart-bars">
+          {points.map((point) => (
+            <div className="chart-column" key={point.date}>
+              <div className="chart-value">{signedPct(point.total_pnl_pct)}</div>
+              <div className="chart-track"><span className={point.total_pnl >= 0 ? "positive-bar" : "negative-bar"} style={{ height: `${Math.max(8, Math.abs(point.total_pnl_pct) / maximum * 100)}%` }} /></div>
+              <span>{point.date.slice(5)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PreferencePanel({ knowledge }: { knowledge: KnowledgeWorkspace | null }) {
+  const preference = knowledge?.preference;
+  return (
+    <section className="preference-page">
+      <div className="preference-summary">
+        <PanelTitle icon="shield" title="核心偏好" caption="Agent 每次分析都必须遵守的个人边界" />
+        {preference ? (
+          <dl className="preference-grid">
+            <TraceItem label="风险偏好" value={styleLabel(preference.risk_preference)} />
+            <TraceItem label="默认策略" value={preference.default_strategy_level} />
+            <TraceItem label="沟通方式" value={preference.communication_style} />
+            <TraceItem label="复盘频率" value={`${preference.review_frequency_days} 天`} />
+            <TraceItem label="偏好资产" value={(preference.preferred_assets ?? []).join("、") || "未设置"} />
+            <TraceItem label="排除资产" value={(preference.blocked_assets ?? []).join("、") || "未设置"} />
+          </dl>
+        ) : <p className="empty-copy">正在读取用户偏好。</p>}
+      </div>
+      <div className="agent-config-panel">
+        <div className="data-page-header"><div><h2>Agent.md</h2><p>当前生效的长期沟通与决策约束。</p></div><span>{preference?.governance_decision ?? "loading"}</span></div>
+        <pre className="agent-md large">{preference?.agent_md ?? "正在读取 Agent 配置。"}</pre>
+        {preference ? <div className="config-foot"><span>版本 {shortReference(preference.active_revision_id)}</span><span>置信度 {Math.round(preference.confidence * 100)}%</span><span>{formatDate(preference.updated_at)}</span></div> : null}
+      </div>
+    </section>
   );
 }
 
@@ -1101,7 +1316,7 @@ function AgentWorkspace({
   return (
     <section className="agent-workspace">
       <div className="agent-chat">
-        <PanelTitle icon="activity" title="Agent 对话" caption="选择 skill，上传材料，发起日常基金复盘" />
+        <PanelTitle icon="activity" title="Agent 对话" caption="带着账户上下文开始今天的分析" />
         <div className="agent-controls">
           <label className="field">
             <span>Skill</span>
@@ -1114,7 +1329,7 @@ function AgentWorkspace({
             </select>
           </label>
           <label className="upload-button">
-            <Icon name="database" />
+            <Paperclip aria-hidden="true" size={16} strokeWidth={1.9} />
             {!conversation ? "初始化中" : uploading ? "上传中" : "上传图片/文件"}
             <input
               accept={acceptedAttachmentTypes}
@@ -1135,7 +1350,7 @@ function AgentWorkspace({
         <div className="message-list">
           {(conversation?.messages ?? []).length > 0 ? (
             conversation?.messages.map((message) => (
-              <div className="message-row" key={message.id}>
+              <div className={`message-row ${message.role}`} key={message.id}>
                 <strong>{message.role}</strong>
                 <span>{message.content}</span>
               </div>
@@ -1147,14 +1362,15 @@ function AgentWorkspace({
             </div>
           )}
         </div>
-        <label className="field">
-          <span>消息</span>
-          <textarea value={input} onChange={(event) => onInputChange(event.target.value)} />
-        </label>
-        <button className="primary-action" disabled={!conversation || sending} onClick={onSend} type="button">
-          <Icon name="play" />
-          {sending ? "发送中" : "发送到 Agent"}
-        </button>
+        <div className="agent-composer">
+          <label className="field">
+            <span className="visually-hidden">消息</span>
+            <textarea aria-label="发送给 Agent 的消息" placeholder="询问持仓、市场变化或本周复盘重点" value={input} onChange={(event) => onInputChange(event.target.value)} />
+          </label>
+          <button aria-label={sending ? "正在发送" : "发送消息"} className="composer-send" disabled={!conversation || sending} onClick={onSend} title={sending ? "正在发送" : "发送消息"} type="button">
+            <Send aria-hidden="true" size={18} strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       <div className="agent-side">
@@ -1320,7 +1536,19 @@ function StatusPill({ icon, label, tone }: { icon: IconName; label: string; tone
 }
 
 function Icon({ name }: { name: IconName }) {
-  return <span aria-hidden="true" className={`ui-icon ${name}`} />;
+  const icons: Record<IconName, LucideIcon> = {
+    activity: Activity,
+    alert: AlertTriangle,
+    bar: BarChart3,
+    check: Check,
+    database: Database,
+    note: FileText,
+    play: Play,
+    shield: ShieldCheck,
+    wallet: WalletCards
+  };
+  const IconComponent = icons[name];
+  return <IconComponent aria-hidden="true" className="ui-icon" size={16} strokeWidth={1.9} />;
 }
 
 function NumberField({
